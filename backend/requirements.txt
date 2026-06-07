@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+asyncpg
+python-dotenv
+python-jose[cryptography]
+passlib
+argon2-cffi
+pydantic[email]
+python-multipart
