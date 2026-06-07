@@ -5,8 +5,8 @@ import Sidebar from "../../src/components/Sidebar"
 
 function probFill(p: number) {
   if (p >= 60) return "#16873a"
-  if (p >= 55) return "#c49710"
-  return "#b3093a"
+  if (p <= 40) return "#b3093a"
+  return "#c49710"
 }
 
 
