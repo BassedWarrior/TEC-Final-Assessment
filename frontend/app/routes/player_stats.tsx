@@ -1,52 +1,17 @@
 import { useState, useEffect, useMemo } from "react"
 import Sidebar from "../../src/components/Sidebar"
-import {MOCK_BATTERS, MOCK_PITCHERS, TEAMS} from "../../src/data/mockPlayers"
-
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-export interface Batter {
-  id: number
-  name: string
-  team: string
-  stand: "R" | "L" | "S"
-  pa: number
-  avg: number
-  obp: number
-  slg: number
-  iso: number
-  k_rate: number
-  bb_rate: number
-  hr_rate: number
-  is_rookie: boolean
-  teamColor: string
-  teamAbbr: string
-}
-
-export interface Pitcher {
-  id: number
-  name: string
-  team: string
-  throws: "R" | "L"
-  pa: number
-  avg: number
-  obp: number
-  slg: number
-  iso: number
-  k_rate: number
-  bb_rate: number
-  hr_rate: number
-  is_new: boolean
-  teamColor: string
-  teamAbbr: string
-}
+import { MOCK_BATTERS, MOCK_PITCHERS, TEAMS } from "../../src/data/mockPlayers"
+import type { Batter, Pitcher } from "../../src/data/mockPlayers"
 
 type Tab = "batter" | "pitcher"
 type SortKey = "name" | "pa" | "avg" | "obp" | "slg" | "iso" | "k_rate" | "bb_rate"
 type SortDir = "asc" | "desc"
 
-// ─── Mock data (replace with API calls later) ────────────────────────────────
-
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function mlbHeadshotUrl(mlbamId: number) {
+  return `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${mlbamId}/headshot/67/current`
+}
 
 function initials(name: string) {
   return name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()
@@ -79,16 +44,41 @@ function bbColor(v: number) {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function PlayerAvatar({ name, color }: { name: string; color: string }) {
+function PlayerPhoto({ mlbamId, name, color, size = 40 }: { mlbamId: number; name: string; color: string; size?: number }) {
+  const [imgError, setImgError] = useState(false)
+
+  if (imgError) {
+    return (
+      <div style={{
+        width: size, height: size, borderRadius: "50%", flexShrink: 0,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: size * 0.32, fontWeight: 700,
+        background: `${color}22`, color,
+        border: `0.5px solid ${color}55`,
+      }}>
+        {initials(name)}
+      </div>
+    )
+  }
+
   return (
     <div style={{
-      width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
-      display: "flex", alignItems: "center", justifyContent: "center",
-      fontSize: 11, fontWeight: 700,
-      background: `${color}22`, color,
-      border: `0.5px solid ${color}55`,
+      width: size, height: size, borderRadius: "50%", flexShrink: 0,
+      overflow: "hidden", background: `${color}15`,
+      border: `0.5px solid ${color}40`,
     }}>
-      {initials(name)}
+      <img
+        src={mlbHeadshotUrl(mlbamId)}
+        alt={name}
+        
+        style={{ 
+          width: "100%",
+          height: "120%",          
+          objectFit: "cover",
+          objectPosition: "top 20%", 
+          marginTop: "-10%" 
+        }}
+      />
     </div>
   )
 }
@@ -118,10 +108,10 @@ function RateBar({ label, value, max, color }: { label: string; value: number; m
   )
 }
 
-function StatBox({ value, label }: { value: string; label: string }) {
+function StatBox({ value, label, color }: { value: string; label: string; color?: string }) {
   return (
     <div style={{ background: "rgba(255,255,255,0.03)", border: "0.5px solid rgba(255,255,255,0.07)", borderRadius: 8, padding: "10px 12px" }}>
-      <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 700, color: "#f0ede6", marginBottom: 2 }}>{value}</div>
+      <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 700, color: color ?? "#f0ede6", marginBottom: 2 }}>{value}</div>
       <div style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", textTransform: "uppercase", letterSpacing: ".06em" }}>{label}</div>
     </div>
   )
@@ -129,7 +119,7 @@ function StatBox({ value, label }: { value: string; label: string }) {
 
 function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
   return (
-    <span style={{ marginLeft: 4, opacity: active ? 1 : 0.3, fontSize: 10 }}>
+    <span style={{ marginLeft: 4, opacity: active ? 1 : 0.3, fontSize: 12, color: "white" }}>
       {active ? (dir === "asc" ? "↑" : "↓") : "↕"}
     </span>
   )
@@ -137,14 +127,7 @@ function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
 
 // ─── Detail Panel ─────────────────────────────────────────────────────────────
 
-function DetailPanel({
-  player, tab, onClose,
-}: {
-  player: Batter | Pitcher | null
-  tab: Tab
-  onClose: () => void
-}) {
-  const open = player !== null
+function DetailPanel({ player, tab, onClose }: { player: Batter | Pitcher | null; tab: Tab; onClose: () => void }) {
   if (!player) return (
     <div style={{ width: 0, transition: "width .25s ease", overflow: "hidden", flexShrink: 0 }} />
   )
@@ -165,20 +148,29 @@ function DetailPanel({
       {/* Header */}
       <div style={{ padding: 20, borderBottom: "0.5px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{
-            width: 44, height: 44, borderRadius: "50%",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 18, fontWeight: 700,
-            background: `${player.teamColor}22`, color: player.teamColor,
-            border: `0.5px solid ${player.teamColor}55`,
-            flexShrink: 0,
-          }}>
-            {initials(player.name)}
-          </div>
+          <PlayerPhoto mlbamId={player.mlbamId} name={player.name} color={player.teamColor} size={70} />
           <div>
             <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, fontWeight: 700, color: "rgba(255,255,255,1)", marginBottom: 3 }}>{player.name}</div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "rgba(255, 255, 255, 0.66)" }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "rgba(255, 255, 255, 0.66)", marginBottom: 7 }}>
               {player.team} · {isBatter ? (b.is_rookie ? "Rookie Batter" : "Batter") : (p.is_new ? "New Pitcher" : "Pitcher")}
+            </div>
+            <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+              {(isBatter ? b.is_rookie : p.is_new) && (
+                <Badge color="rgb(255, 225, 114)" bg="rgba(255, 200, 0, 0.1)">Rookie</Badge>
+              )}
+              {isBatter ? (
+                <Badge
+                  color={b.stand === "L" ? "#7099f0" : b.stand === "S" ? "#99f070" : "#f07080"}
+                  bg={b.stand === "L" ? "rgba(30,100,192,0.15)" : b.stand === "S" ? "rgba(100,192,30,0.15)" : "rgba(192,30,46,0.15)"}>
+                  Bats {b.stand}
+                </Badge>
+              ) : (
+                <Badge
+                  color={p.throws === "R" ? "#f07080" : "#7099f0"}
+                  bg={p.throws === "R" ? "rgba(192,30,46,0.15)" : "rgba(30,100,192,0.15)"}>
+                  Throws {p.throws}
+                </Badge>
+              )}
             </div>
           </div>
         </div>
@@ -188,12 +180,12 @@ function DetailPanel({
         </button>
       </div>
 
-      {/* Core stats */}
+      {/* Core stats — only uses fields that exist in mockPlayers.ts */}
       <div style={{ padding: 16, borderBottom: "0.5px solid rgba(255,255,255,0.05)" }}>
         <div style={{ fontSize: 14, fontWeight: 600, color: "rgba(255, 255, 255, 0.83)", letterSpacing: ".12em", textTransform: "uppercase", marginBottom: 10 }}>Core Stats</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-          <StatBox value={fmt(player.avg)} label={isBatter ? "Batting Avg" : "AVG Allowed"} />
-          <StatBox value={fmt(player.obp)} label={isBatter ? "On-base %" : "OBP Allowed"} />
+          <StatBox value={fmt(player.avg)} label={isBatter ? "Batting Avg" : "AVG Allowed"} color={isBatter ? avgColor(player.avg) : avgColorInverted(player.avg)} />
+          <StatBox value={fmt(player.obp)} label={isBatter ? "On-base %" : "OBP Allowed"} color={isBatter ? avgColor(player.obp) : avgColorInverted(player.obp)} />
           <StatBox value={fmt(player.slg)} label={isBatter ? "Slugging %" : "SLG Allowed"} />
           <StatBox value={fmt(player.iso)} label="Iso Power" />
         </div>
@@ -221,7 +213,6 @@ export default function Statistics() {
   const [sortDir, setSortDir] = useState<SortDir>("desc")
   const [selected, setSelected] = useState<Batter | Pitcher | null>(null)
 
-  // Reset selected player when switching tabs
   useEffect(() => { setSelected(null) }, [tab])
 
   function handleSort(key: SortKey) {
@@ -262,8 +253,8 @@ export default function Statistics() {
 
   const thStyle = (key: SortKey): React.CSSProperties => ({
     padding: "11px 14px",
-    fontSize: 13, fontWeight: 900,
-    color: sortKey === key ? "rgb(255, 87, 87)" : "rgba(255, 255, 255, 0.76)",
+    fontSize: 13, fontWeight: 1000,
+    color: sortKey === key ? "rgb(255, 87, 87)" : "rgba(255, 255, 255, 0.92)",
     textAlign: "left",
     letterSpacing: ".08em",
     textTransform: "uppercase",
@@ -292,7 +283,7 @@ export default function Statistics() {
         <div style={{ padding: "18px 24px", borderBottom: "0.5px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
           <div>
             <div style={{ fontSize: 18, fontWeight: 600,color: "rgb(255, 255, 255)", letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 3 }}>MLB · 2025</div>
-            <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 35, fontWeight: 700, color: "#f0ede6" }}>Player Statistics</h1>
+            <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 40, fontWeight: 700, color: "#f0ede6" }}>Player Statistics</h1>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255, 255, 255, 0.12)", border: "0.5px solid rgba(255, 255, 255, 0.23)", borderRadius: 6, padding: "7px 12px", fontSize: 14, color: "rgb(255, 255, 255)" }}>
             <div style={{ width: 6, height: 6, borderRadius: "50%", background: "rgb(96, 255, 16)" }} />
@@ -302,7 +293,6 @@ export default function Statistics() {
 
         {/* Controls */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 24px", borderBottom: "0.5px solid rgba(255,255,255,0.06)", flexShrink: 0, flexWrap: "wrap" }}>
-          {/* Tabs */}
           <div style={{ display: "flex", gap: 3, background: "rgba(255,255,255,0.04)", borderRadius: 6, padding: 3 }}>
             {(["batter", "pitcher"] as Tab[]).map(t => (
               <button key={t} onClick={() => setTab(t)}
@@ -311,24 +301,17 @@ export default function Statistics() {
               </button>
             ))}
           </div>
-
-          {/* Search */}
           <div style={{ position: "relative", flex: 1, minWidth: 160 }}>
-            <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 15, color: "rgba(255, 255, 255, 0.78)", pointerEvents: "none" }}></span>
             <input value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Search player or team..."
               aria-label="Search players"
-              style={{ width: "100%",color: "rgb(255, 255, 255)", background: "rgba(35, 5, 5, 0.13)", border: "0.5px solid rgba(255, 255, 255, 0.43)", borderRadius: 6, padding: "8px 12px 8px 32px", fontSize: 15, fontFamily: "'DM Sans', sans-serif", fontWeight: 600, outline: "none" }} />
+              style={{ width: "100%", color: "rgb(255, 255, 255)", background: "rgba(35, 5, 5, 0.13)", border: "0.5px solid rgba(255, 255, 255, 0.43)", borderRadius: 6, padding: "8px 12px", fontSize: 15, fontFamily: "'DM Sans', sans-serif", fontWeight: 600, outline: "none" }} />
           </div>
-
-          {/* Team filter */}
           <select value={teamFilter} onChange={e => setTeamFilter(e.target.value)} aria-label="Filter by team"
             style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "8px 10px", fontSize: 14, color: "rgb(255, 255, 255)", fontFamily: "'DM Sans', sans-serif", outline: "none", cursor: "pointer" }}>
             <option value="">All teams</option>
             {TEAMS.map(t => <option key={t}>{t}</option>)}
           </select>
-
-          {/* Rookie filter */}
           <select value={rookieFilter} onChange={e => setRookieFilter(e.target.value)} aria-label="Filter by experience"
             style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "8px 10px", fontSize: 14, color: "rgb(255, 255, 255)", fontFamily: "'DM Sans', sans-serif", outline: "none", cursor: "pointer" }}>
             <option value="">All players</option>
@@ -374,7 +357,7 @@ export default function Statistics() {
                         style={{ borderBottom: "0.5px solid rgba(255,255,255,0.04)", cursor: "pointer", background: isSelected ? "rgba(192,30,46,0.07)" : "transparent", transition: "background .12s" }}>
                         <td style={tdStyle}>
                           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                            <PlayerAvatar name={player.name} color={player.teamColor} />
+                            <PlayerPhoto mlbamId={player.mlbamId} name={player.name} color={player.teamColor} size={50} />
                             <div>
                               <div style={{ fontSize: 16, fontWeight: 700, color: "#f0ede6" }}>{player.name}</div>
                               <div style={{ fontSize: 13, fontWeight: 500, color: "rgba(255, 255, 255, 0.84)" }}>{player.team}</div>
