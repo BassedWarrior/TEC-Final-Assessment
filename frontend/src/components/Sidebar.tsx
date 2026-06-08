@@ -15,6 +15,20 @@ interface SidebarProps {
 export default function Sidebar({ activePath, username }: SidebarProps) {
   const navigate = useNavigate()
 
+  const handleLogout = async () => {
+    try {
+      await fetch("http://localhost:8000/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      })
+    } catch (error) {
+      console.error("Logout error:", error)
+    } finally {
+      // Always navigate to login, even if the request failed
+      navigate("/login")
+    }
+  }
+
   return (
     <aside style={{ width: 200, flexShrink: 0, background: "#0d1117", borderRight: "0.5px solid rgba(255,255,255,0.07)", display: "flex", flexDirection: "column", padding: "28px 0" }}>
       
@@ -53,7 +67,7 @@ export default function Sidebar({ activePath, username }: SidebarProps) {
             <div style={{ fontSize: 17, fontWeight: 500, color: "#f0ede6" }}>{username}</div>
           </div>
         </div>
-        <div onClick={() => navigate("/login")}
+        <div onClick={handleLogout}
           style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 6, fontSize: 15, fontWeight: 500, color: "rgba(145, 136, 250, 0.6)", cursor: "pointer" }}>
           ↩ Log out
         </div>
