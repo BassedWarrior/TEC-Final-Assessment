@@ -124,6 +124,9 @@ export default function Register() {
           {loading ? "Creating Account..." : "Create Account"}
         </button>
 
+        <a onClick = {() => navigate("/login")}
+        style={{ fontSize: 15, fontWeight: 500, color: "rgba(255, 255, 255, 0.5)", marginTop: 8, cursor: "pointer"}}>Sign In</a>
+
         {error && (
           <div style={{ marginBottom: 16, fontSize: 14, color: "#ff6b6b", textAlign: "center" }}>
             {error}
