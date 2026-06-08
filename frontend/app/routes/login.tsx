@@ -6,9 +6,44 @@ export default function Login() {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
 
-  function handleLogin() {
-    // Swap this for your real API call later
-    if (username && password) navigate("/")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+
+  const handleLogin = async () => {
+    if (!username || !password) {
+      setError("Please enter both email and password")
+      return
+    }
+
+    setLoading(true)
+    setError("")
+
+    const formData = new URLSearchParams()
+    formData.append("username", username)   // email here
+    formData.append("password", password)
+
+    try {
+      const response = await fetch("http://localhost:8000/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: formData,
+        credentials: "include",   // ← CRITICAL: sends and receives cookies
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.detail || "Login failed")
+      }
+
+      // No need to store token – the httpOnly cookie is automatically saved
+      navigate("/")
+    } catch (err: any) {
+      setError(err.message || "An error occurred")
+    } finally {
+      setLoading(false)
+    }
   }
 
   const mba_red = "#89082d"
@@ -65,9 +100,16 @@ export default function Login() {
         ))}
 
         <button onClick={handleLogin}
-          style={{ width: "100%", padding: 12, background: mba_red, border: "none", borderRadius: 6, fontSize: 16, fontWeight: 500, color: "#fff", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", letterSpacing: ".04em" }}>
-          Sign in →
+          disabled={loading}
+          style={{ width: "100%", padding: 12, background: mba_red, border: "none", borderRadius: 6, fontSize: 16, fontWeight: 500, color: "#fff", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", letterSpacing: ".04em", opacity: loading ? 0.7 : 1 }}>
+          {loading ? "Signing in..." : "Sign in →"}
         </button>
+
+        {error && (
+          <div style={{ marginBottom: 16, fontSize: 14, color: "#ff6b6b", textAlign: "center" }}>
+            {error}
+          </div>
+        )}
       </div>
 
       {/* Google Fonts */}
