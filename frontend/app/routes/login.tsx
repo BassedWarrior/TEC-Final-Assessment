@@ -84,7 +84,7 @@ export default function Login() {
         <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 35, fontWeight: 700, color: "white", marginBottom: 32 }}>Sign in</h2>
 
         {[
-          { label: "Username", type: "text", val: username, set: setUsername, placeholder: "your username" },
+          { label: "Email", type: "text", val: username, set: setUsername, placeholder: "email@example.com" },
           { label: "Password", type: "password", val: password, set: setPassword, placeholder: "••••••••" },
         ].map(f => (
           <div key={f.label} style={{ marginBottom: 16 }}>

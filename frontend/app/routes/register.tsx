@@ -3,7 +3,7 @@ import { useNavigate } from "react-router"
 
 export default function Register() {
   const navigate = useNavigate()
-  const [username, setUsername] = useState("")
+  const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confpassword, setConfirmPassword] = useState("")
 
@@ -13,8 +13,8 @@ export default function Register() {
 
   const handleCreate = async () => {
     const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if(! pattern.test(username)){
-      setError("Username must be a valid email")
+    if(! pattern.test(email)){
+      setError("Email must be a valid email")
       return
     }
 
@@ -28,7 +28,7 @@ export default function Register() {
       return
     }
 
-    if (!username || !password) {
+    if (!email || !password) {
       setError("Please enter both email and password")
       return
     }
@@ -37,7 +37,7 @@ export default function Register() {
     setError("")
 
     const formData = new URLSearchParams()
-    formData.append("username", username)  // email here
+    formData.append("email", email)  // email here
     formData.append("password", password)
 
     try {
@@ -101,7 +101,7 @@ export default function Register() {
         <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 35, fontWeight: 700, color: "white", marginBottom: 32 }}>Sign Up</h2>
 
         {[
-          { label: "Email", type: "text", val: username, set: setUsername, placeholder: "email@example.com" },
+          { label: "Email", type: "text", val: email, set: setEmail, placeholder: "email@example.com" },
           { label: "Password", type: "password", val: password, set: setPassword, placeholder: "••••••••" },
           { label: "Confirm Password", type: "password", val: confpassword, set: setConfirmPassword, placeholder: "••••••••" },
 
