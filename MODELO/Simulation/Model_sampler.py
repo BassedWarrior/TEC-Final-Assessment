@@ -13,7 +13,7 @@ DATA_DIR = Path("./data")
 MODELS_DIR = Path("./models")
  
 # Orden de las clases (debe matchear el modelo entrenado)
-OUTCOME_ORDER = ["K", "BB", "HBP", "1B", "2B", "3B", "HR", "OUT"]
+OUTCOME_ORDER = ["K", "BB", "HBP", "1B", "2B", "3B", "HR", "OUT", "DP", "SF"]
 OUTCOME_FROM_INDEX = {
     0: Outcome.STRIKEOUT,
     1: Outcome.WALK,
@@ -23,6 +23,8 @@ OUTCOME_FROM_INDEX = {
     5: Outcome.TRIPLE,
     6: Outcome.HOME_RUN,
     7: Outcome.OUT_IN_PLAY,
+    8: Outcome.DOUBLE_PLAY,
+    9: Outcome.SAC_FLY,
 }
 
 LEAGUE_AVG = {
@@ -66,14 +68,30 @@ class PitcherProfile:
 class TeamLineup:
     team_name: str
     batters: list[BatterProfile]  # exactamente 9
-    pitcher: PitcherProfile
- 
+    pitcher: PitcherProfile        # abridor
+    bullpen: list[PitcherProfile] = field(default_factory=list)  # relevistas
+    reliever_entry_inning: int = 6  # inning en que entra el primer relevista
+
     def __post_init__(self):
         if len(self.batters) != 9:
             raise ValueError(f"Lineup necesita 9 bateadores, tiene {len(self.batters)}")
- 
+
     def batter_at(self, idx: int) -> BatterProfile:
         return self.batters[idx]
+
+    def pitcher_for_inning(self, inning: int) -> PitcherProfile:
+        """
+        Devuelve el pitcher activo para el inning dado.
+
+        El abridor lanza hasta `reliever_entry_inning - 1`. A partir de ese
+        inning entra el bullpen: el primer relevista en el inning de entrada,
+        el siguiente un inning después, etc. Si solo hay un relevista, este
+        cubre todos los innings restantes.
+        """
+        if not self.bullpen or inning < self.reliever_entry_inning:
+            return self.pitcher
+        idx = min(inning - self.reliever_entry_inning, len(self.bullpen) - 1)
+        return self.bullpen[idx]
     
 def build_player_profiles(pa_2024: pd.DataFrame) -> tuple[dict, dict]:
     
@@ -185,11 +203,11 @@ class ModelSampler:
         if state.is_top:
             # Top inning: batea el visitante, pitcha el local
             batter = self.away_lineup.batter_at(state.away_batter_idx)
-            pitcher = self.home_lineup.pitcher
+            pitcher = self.home_lineup.pitcher_for_inning(state.inning)
         else:
             # Bottom inning: batea el local, pitcha el visitante
             batter = self.home_lineup.batter_at(state.home_batter_idx)
-            pitcher = self.away_lineup.pitcher
+            pitcher = self.away_lineup.pitcher_for_inning(state.inning)
  
 
         # Bases state: bit 0=1B, bit 1=2B, bit 2=3B
@@ -270,14 +288,25 @@ def build_lineup_from_ids(
     pitcher_id: int,
     batter_profiles: dict,
     pitcher_profiles: dict,
+    bullpen_ids: Optional[list[int]] = None,
+    reliever_entry_inning: int = 6,
 ) -> TeamLineup:
     """
     Construye un TeamLineup buscando los profiles por ID.
     Si algún ID no existe en los profiles (rookie), usa promedio de liga.
+
+    `bullpen_ids` son los relevistas que entran a partir de
+    `reliever_entry_inning` (default: inning 6).
     """
     if len(batter_ids) != 9:
         raise ValueError(f"Necesito 9 batter_ids, recibí {len(batter_ids)}")
- 
+
+    def _resolve_pitcher(pid: int) -> PitcherProfile:
+        if pid in pitcher_profiles:
+            return pitcher_profiles[pid]
+        print(f"    pitcher_id {pid} no encontrado, usando promedio de liga")
+        return make_league_avg_pitcher(pid)
+
     batters = []
     for bid in batter_ids:
         if bid in batter_profiles:
@@ -285,14 +314,17 @@ def build_lineup_from_ids(
         else:
             print(f"  batter_id {bid} no encontrado, usando promedio de liga")
             batters.append(make_league_avg_batter(bid))
- 
-    if pitcher_id in pitcher_profiles:
-        pitcher = pitcher_profiles[pitcher_id]
-    else:
-        print(f"    pitcher_id {pitcher_id} no encontrado, usando promedio de liga")
-        pitcher = make_league_avg_pitcher(pitcher_id)
- 
-    return TeamLineup(team_name=team_name, batters=batters, pitcher=pitcher)
+
+    pitcher = _resolve_pitcher(pitcher_id)
+    bullpen = [_resolve_pitcher(pid) for pid in (bullpen_ids or [])]
+
+    return TeamLineup(
+        team_name=team_name,
+        batters=batters,
+        pitcher=pitcher,
+        bullpen=bullpen,
+        reliever_entry_inning=reliever_entry_inning,
+    )
 
 # ---------------------------------------------------------------------------
 # Diagnostic tests: validar que el modelo se comporta lógicamente
@@ -480,23 +512,31 @@ if __name__ == "__main__":
     )[:18]  # top 18 → 9 para cada equipo
     top_pitchers = sorted(
         pitcher_profiles.values(), key=lambda p: p.pa_count, reverse=True
-    )[:2]
- 
+    )[:4]
+
     home_lineup = TeamLineup(
         team_name="HOME",
         batters=top_batters[:9],
         pitcher=top_pitchers[0],
+        bullpen=[top_pitchers[2]],  # entra en el inning 6
     )
     away_lineup = TeamLineup(
         team_name="AWAY",
         batters=top_batters[9:18],
         pitcher=top_pitchers[1],
+        bullpen=[top_pitchers[3]],  # entra en el inning 6
     )
- 
-    print(f"  HOME pitcher: {home_lineup.pitcher.pitcher_id} "
-          f"(K%={home_lineup.pitcher.k_rate:.3f})")
-    print(f"  AWAY pitcher: {away_lineup.pitcher.pitcher_id} "
-          f"(K%={away_lineup.pitcher.k_rate:.3f})")
+
+    print(f"  HOME abridor: {home_lineup.pitcher.pitcher_id} "
+          f"(K%={home_lineup.pitcher.k_rate:.3f}) → "
+          f"relevo: {home_lineup.bullpen[0].pitcher_id} "
+          f"(K%={home_lineup.bullpen[0].k_rate:.3f}) desde inning "
+          f"{home_lineup.reliever_entry_inning}")
+    print(f"  AWAY abridor: {away_lineup.pitcher.pitcher_id} "
+          f"(K%={away_lineup.pitcher.k_rate:.3f}) → "
+          f"relevo: {away_lineup.bullpen[0].pitcher_id} "
+          f"(K%={away_lineup.bullpen[0].k_rate:.3f}) desde inning "
+          f"{away_lineup.reliever_entry_inning}")
  
     # Construir sampler
     print("\n  Construyendo ModelSampler...")

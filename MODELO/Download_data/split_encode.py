@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-DATA_DIR = Path("./data")
+DATA_DIR = Path("../data")
  
 # Fechas de corte del split temporal
 TRAIN_END = "2025-07-31"   # train: hasta fin de julio
@@ -38,7 +38,7 @@ def encode_features(df: pd.DataFrame) -> pd.DataFrame:
     df["b_is_rookie"] = df["b_is_rookie"].astype(int)
     df["p_is_new"]    = df["p_is_new"].astype(int)
     
-    outcome_order = ["K", "BB", "HBP", "1B", "2B", "3B", "HR", "OUT"]
+    outcome_order = ["K", "BB", "HBP", "1B", "2B", "3B", "HR", "OUT", "DP", "SF"]
     outcome_to_int = {o: i for i, o in enumerate(outcome_order)}
     df["target"] = df["pa_outcome"].map(outcome_to_int)
     
@@ -95,7 +95,7 @@ def print_split_report(train, val, test, feature_cols):
     print("\nDistribución de outcomes por split (debería ser similar):")
     print(f"  {'Clase':<6} {'Train':>8} {'Val':>8} {'Test':>8}")
     print(f"  {'-' * 35}")
-    for outcome in ["K", "BB", "HBP", "1B", "2B", "3B", "HR", "OUT"]:
+    for outcome in ["K", "BB", "HBP", "1B", "2B", "3B", "HR", "OUT", "DP", "SF"]:
         t_pct = (train["pa_outcome"] == outcome).mean() * 100
         v_pct = (val["pa_outcome"] == outcome).mean() * 100
         te_pct = (test["pa_outcome"] == outcome).mean() * 100

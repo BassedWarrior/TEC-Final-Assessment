@@ -13,7 +13,9 @@ LEAGUE_AVG_FREQUENCIES = {
     Outcome.DOUBLE:       0.044,
     Outcome.TRIPLE:       0.004,
     Outcome.HOME_RUN:     0.029,
-    Outcome.OUT_IN_PLAY:  0.462,
+    Outcome.OUT_IN_PLAY:  0.435,
+    Outcome.DOUBLE_PLAY:  0.020,
+    Outcome.SAC_FLY:      0.007,
 }
 
 _total = sum(LEAGUE_AVG_FREQUENCIES.values())

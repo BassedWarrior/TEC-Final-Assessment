@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 
-DATA_DIR = Path("./data")
+DATA_DIR = Path("../data")
 
 MIN_PA_BATTER = 100
 MIN_PA_PITCHER = 50

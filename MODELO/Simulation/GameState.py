@@ -11,6 +11,8 @@ class Outcome:
     TRIPLE = "3B"
     HOME_RUN = "HR"
     OUT_IN_PLAY = "OUT"
+    DOUBLE_PLAY = "DP"   # 2 outs (saca corredor forzado de 1B + bateador)
+    SAC_FLY = "SF"       # 1 out + anota el corredor de 3B
 
 
 @dataclass
@@ -71,13 +73,31 @@ class GameState:
         if outcome==Outcome.STRIKEOUT:
             self.outs+=1
            
-        #Sac_fly 
+        # Out genérico: solo el bateador es eliminado (sin anotación; el sac fly
+        # ahora es su propia clase explícita).
         elif outcome == Outcome.OUT_IN_PLAY:
-            if on3b and self.outs < 2 and self._sac_fly_roll():
-                runs_scored += 1
-                self.bases = (on1b, on2b, False)  # 3B se vacía
             self.outs += 1
-        
+
+        # Double play: si hay corredor forzado en 1B y menos de 2 outs, salen el
+        # corredor de 1B y el bateador (2 outs, limpia 1B); el de 3B anota si lo
+        # hay. Si no hay forzado o ya hay 2 outs, es un out simple del bateador.
+        elif outcome == Outcome.DOUBLE_PLAY:
+            if on1b and self.outs < 2:
+                self.outs += 2
+                if on3b:
+                    runs_scored += 1
+                self.bases = (False, on2b, False)  # 1B out, 3B anotó/vacío, 2B queda
+            else:
+                self.outs += 1
+
+        # Sac fly: 1 out; el corredor de 3B anota (tag-up). Si no hay en 3B, es
+        # un fly-out simple.
+        elif outcome == Outcome.SAC_FLY:
+            self.outs += 1
+            if on3b:
+                runs_scored += 1
+                self.bases = (on1b, on2b, False)
+
         elif outcome==Outcome.WALK or outcome==Outcome.HIT_BY_PITCH:
             if on1b and on2b and on3b:
                 runs_scored += 1  # bases llenas, anota el de 3ra

@@ -3,47 +3,51 @@ from pathlib import Path
 import pandas as pd
  
 
-DATA_DIR = Path("./data")
+DATA_DIR = Path("../data")
 SEASONS = [2024, 2025]
 
-PA_OUTCOMES = ["K", "BB", "HBP", "1B", "2B", "3B", "HR", "OUT"]
- 
+PA_OUTCOMES = ["K", "BB", "HBP", "1B", "2B", "3B", "HR", "OUT", "DP", "SF"]
+
 EVENT_MAPPING = {
     # Strikeouts
     "strikeout":                    "K",
     "strikeout_double_play":        "K",
- 
+
     # Walks
     "walk":                         "BB",
     "intent_walk":                  "BB",
-    "catcher_interf":               "BB",  
- 
+    "catcher_interf":               "BB",
+
     # HBP
     "hit_by_pitch":                 "HBP",
- 
+
     # Hits
     "single":                       "1B",
     "double":                       "2B",
     "triple":                       "3B",
     "home_run":                     "HR",
- 
-    
+
+
     "field_error":                  "1B",
- 
-    
+
+    # Out genérico (1 out, el bateador es eliminado)
     "field_out":                    "OUT",
     "force_out":                    "OUT",
     "fielders_choice":              "OUT",
     "fielders_choice_out":          "OUT",
-    "grounded_into_double_play":    "OUT",
-    "double_play":                  "OUT",
-    "triple_play":                  "OUT",
-    "sac_fly":                      "OUT",
-    "sac_fly_double_play":          "OUT",
     "sac_bunt":                     "OUT",
     "sac_bunt_double_play":         "OUT",
     "other_out":                    "OUT",
     "batter_interference":          "OUT",  # raro
+
+    # Double play (2 outs). Triple play se pliega aquí (≈2 casos/temporada).
+    "grounded_into_double_play":    "DP",
+    "double_play":                  "DP",
+    "triple_play":                  "DP",
+
+    # Sac fly (1 out + anota el corredor de 3B)
+    "sac_fly":                      "SF",
+    "sac_fly_double_play":          "SF",
 }
 
 
@@ -155,7 +159,8 @@ def report_distribution(pa: pd.DataFrame, year: int) -> None:
     # Benchmarks de liga (de simulator.py)
     league_avg = {
         "K":   0.226, "BB":  0.082, "HBP": 0.012, "1B":  0.141,
-        "2B":  0.044, "3B":  0.004, "HR":  0.029, "OUT": 0.462,
+        "2B":  0.044, "3B":  0.004, "HR":  0.029, "OUT": 0.429,
+        "DP":  0.020, "SF":  0.007,
     }
  
     counts = pa["pa_outcome"].value_counts()

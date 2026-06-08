@@ -1,3 +1,13 @@
+import os
+# Paralelizamos por juego (multiprocessing); cada worker debe usar UN solo hilo.
+# Si no, LightGBM lanza varios hilos OMP por proceso y, con N workers, sobre-
+# suscribe los cores y colapsa el throughput. Debe ir antes de importar numpy/lgb.
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "1")
+
+import json
+import multiprocessing as mp
 from pathlib import Path
 from collections import defaultdict
 
@@ -21,10 +31,42 @@ build_lineup_from_ids     = model_sampler_module.build_lineup_from_ids
 
 DATA_DIR = Path("./data")
 MODELS_DIR = Path("./models")
+BOXSCORE_CACHE_DIR = DATA_DIR / "boxscore_cache"
 
-N_SIMS_PER_GAME = 200   
-N_GAMES_TO_VALIDATE = None  
+N_SIMS_PER_GAME = 1000
+N_GAMES_TO_VALIDATE = None
 SEED = 42
+
+# Inning en que entra el primer relevista (cambio de pitcher del abridor al bullpen).
+RELIEVER_ENTRY_INNING = 6
+
+
+def build_bullpen_map(cache_dir: Path = BOXSCORE_CACHE_DIR) -> dict:
+    """
+    Lee los boxscores cacheados y devuelve, por game_pk, los relevistas reales
+    de cada equipo (los pitchers que aparecen DESPUÉS del abridor, en orden de
+    aparición).
+
+    Estructura: {game_pk: {"home": [id, ...], "away": [id, ...]}}
+    """
+    bullpens = {}
+    if not cache_dir.exists():
+        print(f"  ⚠️  No existe {cache_dir}; se simulará sin bullpen.")
+        return bullpens
+
+    for fpath in cache_dir.glob("*.json"):
+        try:
+            data = json.loads(fpath.read_text())
+            teams = data["teams"]
+            # pitchers[0] es el abridor (coincide con lineups.parquet); el resto, bullpen
+            bullpens[int(fpath.stem)] = {
+                "home": list(teams["home"]["pitchers"][1:]),
+                "away": list(teams["away"]["pitchers"][1:]),
+            }
+        except (KeyError, ValueError, json.JSONDecodeError):
+            continue  # boxscore incompleto o corrupto: ese juego va sin bullpen
+
+    return bullpens
 
 
 def load_artifacts():
@@ -43,6 +85,9 @@ def load_artifacts():
     
     lineups = pd.read_parquet(DATA_DIR / "lineups.parquet")
     print(f"  {len(lineups):,} juegos con lineups disponibles")
+
+    bullpen_map = build_bullpen_map()
+    print(f"  {len(bullpen_map):,} juegos con bullpen (relevistas) desde boxscores")
 
     
     pa_2025 = pd.read_parquet(DATA_DIR / "pa_2025_with_features.parquet")
@@ -66,7 +111,7 @@ def load_artifacts():
     results = last_pas[["game_pk", "final_home_score", "final_away_score"]].copy()
     results["home_won"] = (results["final_home_score"] > results["final_away_score"]).astype(int)
 
-    return model_path, feature_names, batter_profiles, pitcher_profiles, lineups, results
+    return model_path, feature_names, batter_profiles, pitcher_profiles, lineups, results, bullpen_map
 
 
 
@@ -93,6 +138,63 @@ def monte_carlo_wp(
 
 
 
+# --- Worker paralelo: cada juego es independiente; se reparten en los cores. ---
+# Misma simulación que el loop serial, solo cambia que corre en paralelo y con
+# 1 hilo por proceso. No altera la lógica de outcomes ni los perfiles.
+_W = {}
+
+
+def _init_worker(model_path, feature_names, batter_profiles, pitcher_profiles, n_sims, bullpen_map):
+    os.environ["OMP_NUM_THREADS"] = "1"
+    _W["model_path"] = model_path
+    _W["fn"] = feature_names
+    _W["bp"] = batter_profiles
+    _W["pp"] = pitcher_profiles
+    _W["ns"] = n_sims
+    _W["bm"] = bullpen_map
+
+
+def _sim_game(game: dict):
+    bullpen = _W["bm"].get(int(game["game_pk"]), {})
+    try:
+        home_lineup = build_lineup_from_ids(
+            team_name=game["home_team"],
+            batter_ids=list(game["home_batter_ids"]),
+            pitcher_id=game["home_pitcher_id"],
+            batter_profiles=_W["bp"], pitcher_profiles=_W["pp"],
+            bullpen_ids=bullpen.get("home"),
+            reliever_entry_inning=RELIEVER_ENTRY_INNING,
+        )
+        away_lineup = build_lineup_from_ids(
+            team_name=game["away_team"],
+            batter_ids=list(game["away_batter_ids"]),
+            pitcher_id=game["away_pitcher_id"],
+            batter_profiles=_W["bp"], pitcher_profiles=_W["pp"],
+            bullpen_ids=bullpen.get("away"),
+            reliever_entry_inning=RELIEVER_ENTRY_INNING,
+        )
+    except ValueError:
+        return None  # lineup incompleto
+
+    sampler = ModelSampler(
+        model_path=_W["model_path"],
+        feature_names=_W["fn"],
+        home_lineup=home_lineup,
+        away_lineup=away_lineup,
+        seed=SEED + int(game["game_pk"]),  # seed único por juego
+    )
+    wp, _, valid_sims = monte_carlo_wp(GameState(), sampler, _W["ns"])
+    return {
+        "game_pk":     game["game_pk"],
+        "home_team":   game["home_team"],
+        "away_team":   game["away_team"],
+        "wp_home":     wp,
+        "home_won":    game["home_won"],
+        "final_score": f"{game['final_home_score']}-{game['final_away_score']}",
+        "valid_sims":  valid_sims,
+    }
+
+
 def validate_against_test(
     model_path: Path,
     feature_names: list,
@@ -100,63 +202,27 @@ def validate_against_test(
     pitcher_profiles: dict,
     lineups: pd.DataFrame,
     results: pd.DataFrame,
+    bullpen_map: dict,
     n_sims: int = N_SIMS_PER_GAME,
     max_games: int = None,
+    n_workers: int = None,
 ) -> pd.DataFrame:
-    
 
     games = lineups.merge(results, on="game_pk", how="inner")
-    print(f"\nJuegos a validar: {len(games):,}")
-
     if max_games:
         games = games.head(max_games)
-        print(f"  (limitado a {max_games} para prueba rápida)")
+    game_records = games.to_dict("records")
+    n_workers = n_workers or max(1, mp.cpu_count() - 2)
+    print(f"\nJuegos a validar: {len(game_records):,}  (n_sims={n_sims}, workers={n_workers})")
 
-    predictions = []
+    initargs = (model_path, feature_names, batter_profiles, pitcher_profiles, n_sims, bullpen_map)
+    with mp.Pool(n_workers, initializer=_init_worker, initargs=initargs) as pool:
+        out = list(tqdm(
+            pool.imap_unordered(_sim_game, game_records, chunksize=4),
+            total=len(game_records), desc="Calculando WPs",
+        ))
 
-    for _, game in tqdm(games.iterrows(), total=len(games), desc="Calculando WPs"):
-        # Construir lineups
-        try:
-            home_lineup = build_lineup_from_ids(
-                team_name=game["home_team"],
-                batter_ids=list(game["home_batter_ids"]),
-                pitcher_id=game["home_pitcher_id"],
-                batter_profiles=batter_profiles,
-                pitcher_profiles=pitcher_profiles,
-            )
-            away_lineup = build_lineup_from_ids(
-                team_name=game["away_team"],
-                batter_ids=list(game["away_batter_ids"]),
-                pitcher_id=game["away_pitcher_id"],
-                batter_profiles=batter_profiles,
-                pitcher_profiles=pitcher_profiles,
-            )
-        except ValueError:
-            continue  # lineup incompleto
-
-
-        sampler = ModelSampler(
-            model_path=model_path,
-            feature_names=feature_names,
-            home_lineup=home_lineup,
-            away_lineup=away_lineup,
-            seed=SEED + int(game["game_pk"]),  # seed único por juego
-        )
-
-
-        initial_state = GameState()
-        wp, _, valid_sims = monte_carlo_wp(initial_state, sampler, n_sims)
-
-        predictions.append({
-            "game_pk":     game["game_pk"],
-            "home_team":   game["home_team"],
-            "away_team":   game["away_team"],
-            "wp_home":     wp,
-            "home_won":    game["home_won"],
-            "final_score": f"{game['final_home_score']}-{game['final_away_score']}",
-            "valid_sims":  valid_sims,
-        })
-
+    predictions = [r for r in out if r is not None]
     return pd.DataFrame(predictions)
 
 
@@ -267,7 +333,7 @@ if __name__ == "__main__":
     print("=" * 70)
 
     # Cargar todo
-    model_path, feature_names, batter_profiles, pitcher_profiles, lineups, results = load_artifacts()
+    model_path, feature_names, batter_profiles, pitcher_profiles, lineups, results, bullpen_map = load_artifacts()
 
     # Validar
     predictions = validate_against_test(
@@ -277,6 +343,7 @@ if __name__ == "__main__":
         pitcher_profiles=pitcher_profiles,
         lineups=lineups,
         results=results,
+        bullpen_map=bullpen_map,
         n_sims=N_SIMS_PER_GAME,
         max_games=N_GAMES_TO_VALIDATE,
     )

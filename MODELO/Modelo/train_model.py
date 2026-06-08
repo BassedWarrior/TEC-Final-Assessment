@@ -11,7 +11,7 @@ MODELS_DIR = Path("./models")
 MODELS_DIR.mkdir(exist_ok=True)
 
 
-OUTCOME_ORDER = ["K", "BB", "HBP", "1B", "2B", "3B", "HR", "OUT"]
+OUTCOME_ORDER = ["K", "BB", "HBP", "1B", "2B", "3B", "HR", "OUT", "DP", "SF"]
 NUM_CLASSES = len(OUTCOME_ORDER)
 
 

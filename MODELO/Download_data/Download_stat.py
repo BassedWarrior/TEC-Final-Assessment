@@ -6,7 +6,7 @@ import pandas as pd
 from pybaseball import statcast
 
 
-DATA_DIR = Path("./data")
+DATA_DIR = Path("../data")
 DATA_DIR.mkdir(exist_ok=True)
 
 # Rangos de fechas de temporada regular (aproximados — pybaseball filtra lo real)
