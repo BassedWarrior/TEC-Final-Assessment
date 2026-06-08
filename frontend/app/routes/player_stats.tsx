@@ -4,7 +4,7 @@ import { MOCK_BATTERS, MOCK_PITCHERS, TEAMS } from "../../src/data/mockPlayers"
 import type { Batter, Pitcher } from "../../src/data/mockPlayers"
 
 type Tab = "batter" | "pitcher"
-type SortKey = "name" | "pa" | "avg" | "obp" | "slg" | "iso" | "k_rate" | "bb_rate"
+type SortKey = "name" | "pa" | "avg" | "obp" | "slg" | "iso" | "k_rate" | "bb_rate" | "status" | "stand"
 type SortDir = "asc" | "desc"
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -227,9 +227,24 @@ export default function Statistics() {
     if (rookieFilter === "rookie") data = data.filter(p => p.is_rookie)
     if (rookieFilter === "vet") data = data.filter(p => !p.is_rookie)
     data.sort((a, b) => {
-      const av = a[sortKey as keyof Batter] as number
-      const bv = b[sortKey as keyof Batter] as number
-      return sortDir === "asc" ? av - bv : bv - av
+      if (sortKey === "status") {
+        return sortDir === "asc"
+          ? Number(a.is_rookie) - Number(b.is_rookie)
+          : Number(b.is_rookie) - Number(a.is_rookie)
+      }
+
+      const av = a[sortKey as keyof Batter]
+      const bv = b[sortKey as keyof Batter]
+
+      if (typeof av === "string" && typeof bv === "string") {
+        return sortDir === "asc"
+          ? av.localeCompare(bv)
+          : bv.localeCompare(av)
+      }
+
+      return sortDir === "asc"
+        ? (av as number) - (bv as number)
+        : (bv as number) - (av as number)
     })
     return data
   }, [search, teamFilter, rookieFilter, sortKey, sortDir])
@@ -240,10 +255,31 @@ export default function Statistics() {
     if (teamFilter) data = data.filter(p => p.team === teamFilter)
     if (rookieFilter === "rookie") data = data.filter(p => p.is_new)
     if (rookieFilter === "vet") data = data.filter(p => !p.is_new)
-    data.sort((a, b) => {
-      const av = a[sortKey as keyof Pitcher] as number
-      const bv = b[sortKey as keyof Pitcher] as number
-      return sortDir === "asc" ? av - bv : bv - av
+     data.sort((a, b) => {
+      if (sortKey === "status") {
+        return sortDir === "asc"
+          ? Number(a.is_new) - Number(b.is_new)
+          : Number(b.is_new) - Number(a.is_new)
+      }
+
+      if (sortKey === "stand") {
+      return sortDir === "asc"
+        ? a.throws.localeCompare(b.throws)
+        : b.throws.localeCompare(a.throws)
+      }
+
+      const av = a[sortKey as keyof Pitcher]
+      const bv = b[sortKey as keyof Pitcher]
+
+      if (typeof av === "string" && typeof bv === "string") {
+        return sortDir === "asc"
+          ? av.localeCompare(bv)
+          : bv.localeCompare(av)
+      }
+
+      return sortDir === "asc"
+        ? (av as number) - (bv as number)
+        : (bv as number) - (av as number)
     })
     return data
   }, [search, teamFilter, rookieFilter, sortKey, sortDir])
@@ -327,7 +363,7 @@ export default function Statistics() {
               <table style={{ width: "100%", borderCollapse: "collapse" }} aria-label="Player statistics">
                 <thead>
                   <tr style={{ background: "rgba(255,255,255,0.02)", borderBottom: "0.5px solid rgba(255,255,255,0.07)" }}>
-                    <th style={{ ...thStyle("name"), cursor: "default" }}>Player</th>
+                    <th style={thStyle("name")} onClick={() => handleSort("name")}>Player <SortIcon active={sortKey === "name"} dir={sortDir} /></th>
                     <th style={thStyle("pa")} onClick={() => handleSort("pa")}>PA <SortIcon active={sortKey === "pa"} dir={sortDir} /></th>
                     <th style={thStyle("avg")} onClick={() => handleSort("avg")}>{isPitcher ? "AVG Allowed" : "AVG"} <SortIcon active={sortKey === "avg"} dir={sortDir} /></th>
                     <th style={thStyle("obp")} onClick={() => handleSort("obp")}>{isPitcher ? "OBP Allowed" : "OBP"} <SortIcon active={sortKey === "obp"} dir={sortDir} /></th>
@@ -335,8 +371,8 @@ export default function Statistics() {
                     <th style={thStyle("iso")} onClick={() => handleSort("iso")}>ISO <SortIcon active={sortKey === "iso"} dir={sortDir} /></th>
                     <th style={thStyle("k_rate")} onClick={() => handleSort("k_rate")}>K% <SortIcon active={sortKey === "k_rate"} dir={sortDir} /></th>
                     <th style={thStyle("bb_rate")} onClick={() => handleSort("bb_rate")}>BB% <SortIcon active={sortKey === "bb_rate"} dir={sortDir} /></th>
-                    <th style={{ ...thStyle("name"), cursor: "default" }}>{isPitcher ? "Throws" : "Stand"}</th>
-                    <th style={{ ...thStyle("name"), cursor: "default" }}>Status</th>
+                    <th style={thStyle("stand")} onClick={() => handleSort("stand")}>{isPitcher ? "Throws" : "Stand"} <SortIcon active={sortKey === "stand"} dir={sortDir} /></th>
+                    <th style={thStyle("status")} onClick={() => handleSort("status")}>Status <SortIcon active={sortKey === "status"} dir={sortDir} /></th>
                   </tr>
                 </thead>
                 <tbody>
