@@ -354,7 +354,7 @@ export default function Statistics() {
                     return (
                       <tr key={player.id}
                         onClick={() => setSelected(isSelected ? null : player)}
-                        style={{ borderBottom: "0.5px solid rgba(255,255,255,0.04)", cursor: "pointer", background: isSelected ? "rgba(192,30,46,0.07)" : "transparent", transition: "background .12s" }}>
+                        style={{ borderBottom: "0.5px solid rgba(255,255,255,0.04)", cursor: "pointer", background: isSelected ? "rgba(204, 190, 192, 0.3)" : "transparent", transition: "background .12s" }}>
                         <td style={tdStyle}>
                           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                             <PlayerPhoto mlbamId={player.mlbamId} name={player.name} color={player.teamColor} size={50} />
