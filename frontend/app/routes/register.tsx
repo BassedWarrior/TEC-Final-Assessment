@@ -11,58 +11,58 @@ export default function Register() {
   const [error, setError] = useState("")
 
 
-    const handleCreate = async () => {
-        const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if(! pattern.test(username)){
-            setError("Username must be a valid email")
-            return
-        }
-
-        if(password.length < 8){
-                setError("Password must be at least 8 characters long ")
-                return
-            }
-
-        if(confpassword != password) {
-            setError("Passwords do not match")
-            return
-        }
-
-        if (!username || !password) {
-        setError("Please enter both email and password")
-        return
-        }
-
-        setLoading(true)
-        setError("")
-
-        const formData = new URLSearchParams()
-        formData.append("username", username)   // email here
-        formData.append("password", password)
-
-        try {
-        const response = await fetch("http://localhost:8000/auth/register", {
-            method: "POST",
-            headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            },
-            body: formData,
-            credentials: "include",   // ← CRITICAL: sends and receives cookies
-        })
-
-        if (!response.ok) {
-            const errorData = await response.json()
-            throw new Error(errorData.detail || "Registration failed")
-        }
-
-        // No need to store token – the httpOnly cookie is automatically saved
-        navigate("/")
-        } catch (err: any) {
-        setError(err.message || "An error occurred")
-        } finally {
-        setLoading(false)
-        }
+  const handleCreate = async () => {
+    const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if(! pattern.test(username)){
+      setError("Username must be a valid email")
+      return
     }
+
+    if(password.length < 8){
+      setError("Password must be at least 8 characters long ")
+      return
+    }
+
+    if(confpassword != password) {
+      setError("Passwords do not match")
+      return
+    }
+
+    if (!username || !password) {
+      setError("Please enter both email and password")
+      return
+    }
+
+    setLoading(true)
+    setError("")
+
+    const formData = new URLSearchParams()
+    formData.append("username", username)  // email here
+    formData.append("password", password)
+
+    try {
+      const response = await fetch("http://localhost:8000/auth/register", {
+        method: "POST",
+        headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: formData,
+        credentials: "include",  // ← CRITICAL: sends and receives cookies
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.detail || "Registration failed")
+      }
+
+      // No need to store token – the httpOnly cookie is automatically saved
+      navigate("/")
+    } catch (err: any) {
+      setError(err.message || "An error occurred")
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const mba_red = "#89082d"
   const light_blue = "rgb(50, 38, 209)"
