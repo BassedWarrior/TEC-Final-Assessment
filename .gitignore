@@ -216,5 +216,3 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
-*.parquet
-MODELO/data/boxscore_cache/
