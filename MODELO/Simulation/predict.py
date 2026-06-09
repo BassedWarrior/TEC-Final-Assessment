@@ -100,6 +100,152 @@ def win_probability_from_stats(
     }
 
 
+def simulate_match_from_stats(
+    home_batters: list,
+    home_pitcher,
+    away_batters: list,
+    away_pitcher,
+    home_bullpen: Optional[list] = None,
+    away_bullpen: Optional[list] = None,
+    reliever_entry_inning: int = 6,
+    n_sims: int = 500,
+    seed: Optional[int] = None,
+    home_team: str = "HOME",
+    away_team: str = "AWAY",
+    match_id: int = 1,
+) -> dict:
+    """
+    Igual que win_probability_from_stats, pero además del win-prob devuelve el
+    desglose inning-por-inning de cada simulación, listo para persistir en el
+    modelo relacional Match / Simulation / Inning.
+
+    Estructura devuelta (IDs enteros, claves foráneas resueltas):
+        {
+          "match":       {id, home_wp, away_wp, total_sims},
+          "simulations": [{id, match_id}, ...],          # una por sim válida
+          "innings":     [{id, simulation_id, inning_number,
+                           home_strikeouts, away_strikeouts,
+                           home_hits, away_hits, home_runs, away_runs,
+                           home_hr, away_hr}, ...],
+        }
+
+    STKO = strikeouts (ponches).
+    """
+    booster = load_booster(MODEL_PATH)
+    feature_names = _feature_names()
+
+    home_lineup = build_lineup_from_stats(
+        team_name=home_team,
+        batter_arrays=home_batters,
+        pitcher_array=home_pitcher,
+        bullpen_arrays=home_bullpen,
+        reliever_entry_inning=reliever_entry_inning,
+    )
+    away_lineup = build_lineup_from_stats(
+        team_name=away_team,
+        batter_arrays=away_batters,
+        pitcher_array=away_pitcher,
+        bullpen_arrays=away_bullpen,
+        reliever_entry_inning=reliever_entry_inning,
+    )
+
+    sampler = ModelSampler(
+        model_path=booster,
+        feature_names=feature_names,
+        home_lineup=home_lineup,
+        away_lineup=away_lineup,
+        seed=seed,
+    )
+
+    simulations = []
+    innings = []
+    home_wins = 0
+    valid_sims = 0
+    sim_id = 0
+    inning_id = 0
+
+    for _ in range(n_sims):
+        try:
+            result = play_game(
+                sampler, initial_state=GameState(), track_innings=True
+            )
+        except RuntimeError:
+            continue  # juego excedió max_pas (raro)
+
+        valid_sims += 1
+        sim_id += 1
+        if result.home_won:
+            home_wins += 1
+
+        simulations.append({"id": sim_id, "match_id": match_id})
+
+        for inn in result.innings:
+            inning_id += 1
+            innings.append({
+                "id":              inning_id,
+                "simulation_id":   sim_id,
+                "inning_number":   inn.inning_number,
+                "home_strikeouts": inn.home_strikeouts,
+                "away_strikeouts": inn.away_strikeouts,
+                "home_hits":       inn.home_hits,
+                "away_hits":       inn.away_hits,
+                "home_runs":       inn.home_runs,
+                "away_runs":       inn.away_runs,
+                "home_hr":         inn.home_hr,
+                "away_hr":         inn.away_hr,
+            })
+
+    wp_home = home_wins / valid_sims if valid_sims > 0 else 0.5
+
+    return {
+        "match": {
+            "id":         match_id,
+            "home_wp":    round(wp_home, 4),
+            "away_wp":    round(1.0 - wp_home, 4),
+            "total_sims": valid_sims,
+        },
+        "simulations": simulations,
+        "innings":     innings,
+    }
+
+
+def to_nested(out: dict) -> dict:
+    """
+    Convierte la salida plana (relacional) de simulate_match_from_stats al formato
+    ANIDADO Match -> Simulations -> sim_N -> inning_M -> stats.
+
+    Útil para consumirlo como JSON directo (app/frontend). Para BD usa la forma
+    plana original (mapea 1:1 a las tablas Match/Simulation/Inning).
+    """
+    # innings agrupados por simulación
+    innings_by_sim: dict = {}
+    for inn in out["innings"]:
+        innings_by_sim.setdefault(inn["simulation_id"], []).append(inn)
+
+    simulations = {}
+    for sim in out["simulations"]:
+        sid = sim["id"]
+        sim_innings = {}
+        for inn in sorted(innings_by_sim.get(sid, []), key=lambda x: x["inning_number"]):
+            sim_innings[f"inning_{inn['inning_number']}"] = {
+                "Home_STKO": inn["home_strikeouts"],
+                "Away_STKO": inn["away_strikeouts"],
+                "Home_Hits": inn["home_hits"],
+                "Away_Hits": inn["away_hits"],
+                "Home_Runs": inn["home_runs"],
+                "Away_Runs": inn["away_runs"],
+                "Home_HR":   inn["home_hr"],
+                "Away_HR":   inn["away_hr"],
+            }
+        simulations[f"sim_{sid}"] = sim_innings
+
+    return {
+        "Home_wp":     out["match"]["home_wp"],
+        "Away_wp":     out["match"]["away_wp"],
+        "Simulations": simulations,
+    }
+
+
 if __name__ == "__main__":
     # Demo: lineup élite (home) vs lineup débil (away).
     # Array: [mano, pa_count, avg, obp, slg, iso, k_rate, bb_rate, hr_rate, flag]

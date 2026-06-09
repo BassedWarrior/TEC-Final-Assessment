@@ -1,8 +1,8 @@
 import random
 import statistics
+from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Callable, Optional
- 
 from GameState import GameState, Outcome
 
 LEAGUE_AVG_FREQUENCIES = {
@@ -34,8 +34,26 @@ class LeagueAverageSampler:
     
 
 @dataclass
+class InningStats:
+    """Línea de un inning (un número de inning) con el aporte de cada equipo.
+
+    El equipo visitante (away) batea en el Top y el local (home) en el Bottom,
+    así que un mismo `inning_number` agrega ambos medios-innings.
+    """
+    inning_number: int
+    home_strikeouts: int = 0
+    away_strikeouts: int = 0
+    home_hits: int = 0
+    away_hits: int = 0
+    home_runs: int = 0
+    away_runs: int = 0
+    home_hr: int = 0
+    away_hr: int = 0
+
+
+@dataclass
 class GameResult:
-    
+
     home_score:int
     away_score:int
     innings_played:int
@@ -45,24 +63,27 @@ class GameResult:
     home_strikeouts: int    # ← NUEVO
     away_strikeouts: int
     went_to_extras:bool
-    
+    # Desglose por inning (solo si play_game se llamó con track_innings=True).
+    innings: Optional[list] = None
+
     @property
     def home_won(self)-> bool:
-        return self.home_score > self.away_score 
-    
+        return self.home_score > self.away_score
+
     @property
     def is_tie(self) -> bool:
         return self.home_score == self.away_score
-    
-    
+
+
 HIT_OUTCOMES = {Outcome.SINGLE, Outcome.DOUBLE, Outcome.TRIPLE, Outcome.HOME_RUN}
-    
+
 def play_game(
     sampler: Callable[[GameState], Outcome],
     initial_state: Optional[GameState] = None,
     max_pas: int = 1000,  # safety: evita loops infinitos por bugs
+    track_innings: bool = False,  # acumula el desglose por inning (más costoso)
 ) -> GameResult:
-    
+
     state = initial_state.copy() if initial_state else GameState()
     total_pas = 0
     home_hits = 0
@@ -70,7 +91,19 @@ def play_game(
     home_strikeouts = 0     # ← NUEVO
     away_strikeouts = 0
     last_pa_inning = 1
-    
+
+    # Acumuladores por inning: {inning_number: {home_runs, away_runs, ...}}.
+    # Solo se llenan si track_innings; si no, el overhead es nulo.
+    inning_acc = (
+        defaultdict(lambda: {
+            "home_strikeouts": 0, "away_strikeouts": 0,
+            "home_hits": 0, "away_hits": 0,
+            "home_runs": 0, "away_runs": 0,
+            "home_hr": 0, "away_hr": 0,
+        })
+        if track_innings else None
+    )
+
     while not state.is_game_over():
         if total_pas >= max_pas:
             raise RuntimeError(
@@ -78,15 +111,16 @@ def play_game(
                 f"reglas. Estado actual: {state}"
             )
         outcome= sampler(state)
-        
+
         is_home_batting= not state.is_top
-        last_pa_inning=state.inning
-        
-        state.apply_outcome(outcome)
-        
-        total_pas+=1   
-        
-        
+        inning = state.inning
+        last_pa_inning = inning
+
+        runs = state.apply_outcome(outcome)
+
+        total_pas+=1
+
+
         if outcome in HIT_OUTCOMES:
             if is_home_batting:
                 home_hits+=1
@@ -97,7 +131,25 @@ def play_game(
                 home_strikeouts += 1
             else:
                 away_strikeouts += 1
-                
+
+        if track_innings:
+            side = "home" if is_home_batting else "away"
+            s = inning_acc[inning]
+            s[f"{side}_runs"] += runs
+            if outcome in HIT_OUTCOMES:
+                s[f"{side}_hits"] += 1
+            if outcome == Outcome.HOME_RUN:
+                s[f"{side}_hr"] += 1
+            if outcome == Outcome.STRIKEOUT:
+                s[f"{side}_strikeouts"] += 1
+
+    innings = None
+    if track_innings:
+        innings = [
+            InningStats(inning_number=n, **inning_acc[n])
+            for n in sorted(inning_acc)
+        ]
+
     return GameResult(
         home_score=state.home_score,
         away_score=state.away_score,
@@ -109,6 +161,7 @@ def play_game(
         home_strikeouts=home_strikeouts,    # ← NUEVO
         away_strikeouts=away_strikeouts,
         went_to_extras=last_pa_inning > 9,
+        innings=innings,
     )
     
     
