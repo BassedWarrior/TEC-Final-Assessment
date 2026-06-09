@@ -363,16 +363,216 @@ export default function Statistics() {
               <table style={{ width: "100%", borderCollapse: "collapse" }} aria-label="Player statistics">
                 <thead>
                   <tr style={{ background: "rgba(255,255,255,0.02)", borderBottom: "0.5px solid rgba(255,255,255,0.07)" }}>
-                    <th style={thStyle("name")} onClick={() => handleSort("name")}>Player <SortIcon active={sortKey === "name"} dir={sortDir} /></th>
-                    <th style={thStyle("pa")} onClick={() => handleSort("pa")}>PA <SortIcon active={sortKey === "pa"} dir={sortDir} /></th>
-                    <th style={thStyle("avg")} onClick={() => handleSort("avg")}>{isPitcher ? "AVG Allowed" : "AVG"} <SortIcon active={sortKey === "avg"} dir={sortDir} /></th>
-                    <th style={thStyle("obp")} onClick={() => handleSort("obp")}>{isPitcher ? "OBP Allowed" : "OBP"} <SortIcon active={sortKey === "obp"} dir={sortDir} /></th>
-                    <th style={thStyle("slg")} onClick={() => handleSort("slg")}>{isPitcher ? "SLG Allowed" : "SLG"} <SortIcon active={sortKey === "slg"} dir={sortDir} /></th>
-                    <th style={thStyle("iso")} onClick={() => handleSort("iso")}>ISO <SortIcon active={sortKey === "iso"} dir={sortDir} /></th>
-                    <th style={thStyle("k_rate")} onClick={() => handleSort("k_rate")}>K% <SortIcon active={sortKey === "k_rate"} dir={sortDir} /></th>
-                    <th style={thStyle("bb_rate")} onClick={() => handleSort("bb_rate")}>BB% <SortIcon active={sortKey === "bb_rate"} dir={sortDir} /></th>
-                    <th style={thStyle("stand")} onClick={() => handleSort("stand")}>{isPitcher ? "Throws" : "Stand"} <SortIcon active={sortKey === "stand"} dir={sortDir} /></th>
-                    <th style={thStyle("status")} onClick={() => handleSort("status")}>Status <SortIcon active={sortKey === "status"} dir={sortDir} /></th>
+                    <th style={{ ...thStyle("name"), padding: 0 }}>
+                      <button
+                        onClick={() => handleSort("name")}
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          padding: "11px 14px",
+                          background: "transparent",
+                          border: "none",
+                          fontSize: "inherit",
+                          fontWeight: "inherit",
+                          color: "inherit",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        Player <SortIcon active={sortKey === "name"} dir={sortDir} />
+                      </button>
+                    </th>
+                    <th style={{ ...thStyle("pa"), padding: 0 }}>
+                      <button
+                        onClick={() => handleSort("pa")}
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          padding: "11px 14px",
+                          background: "transparent",
+                          border: "none",
+                          fontSize: "inherit",
+                          fontWeight: "inherit",
+                          color: "inherit",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        PA <SortIcon active={sortKey === "pa"} dir={sortDir} />
+                      </button>
+                    </th>
+                    <th style={{ ...thStyle("avg"), padding: 0 }}>
+                      <button
+                        onClick={() => handleSort("avg")}
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          padding: "11px 14px",
+                          background: "transparent",
+                          border: "none",
+                          fontSize: "inherit",
+                          fontWeight: "inherit",
+                          color: "inherit",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        {isPitcher ? "AVG Allowed" : "AVG"} <SortIcon active={sortKey === "avg"} dir={sortDir} />
+                      </button>
+                    </th>
+                    <th style={{ ...thStyle("obp"), padding: 0 }}>
+                      <button
+                        onClick={() => handleSort("obp")}
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          padding: "11px 14px",
+                          background: "transparent",
+                          border: "none",
+                          fontSize: "inherit",
+                          fontWeight: "inherit",
+                          color: "inherit",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        {isPitcher ? "OBP Allowed" : "OBP"} <SortIcon active={sortKey === "obp"} dir={sortDir} />
+                      </button>
+                    </th>
+                    <th style={{ ...thStyle("slg"), padding: 0 }}>
+                      <button
+                        onClick={() => handleSort("slg")}
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          padding: "11px 14px",
+                          background: "transparent",
+                          border: "none",
+                          fontSize: "inherit",
+                          fontWeight: "inherit",
+                          color: "inherit",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        {isPitcher ? "SLG Allowed" : "SLG"} <SortIcon active={sortKey === "slg"} dir={sortDir} />
+                      </button>
+                    </th>
+                    <th style={{ ...thStyle("iso"), padding: 0 }}>
+                      <button
+                        onClick={() => handleSort("iso")}
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          padding: "11px 14px",
+                          background: "transparent",
+                          border: "none",
+                          fontSize: "inherit",
+                          fontWeight: "inherit",
+                          color: "inherit",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        ISO <SortIcon active={sortKey === "iso"} dir={sortDir} />
+                      </button>
+                    </th>
+                    <th style={{ ...thStyle("k_rate"), padding: 0 }}>
+                      <button
+                        onClick={() => handleSort("k_rate")}
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          padding: "11px 14px",
+                          background: "transparent",
+                          border: "none",
+                          fontSize: "inherit",
+                          fontWeight: "inherit",
+                          color: "inherit",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        K% <SortIcon active={sortKey === "k_rate"} dir={sortDir} />
+                      </button>
+                    </th>
+                    <th style={{ ...thStyle("bb_rate"), padding: 0 }}>
+                      <button
+                        onClick={() => handleSort("bb_rate")}
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          padding: "11px 14px",
+                          background: "transparent",
+                          border: "none",
+                          fontSize: "inherit",
+                          fontWeight: "inherit",
+                          color: "inherit",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        BB% <SortIcon active={sortKey === "bb_rate"} dir={sortDir} />
+                      </button>
+                    </th>
+                    <th style={{ ...thStyle("stand"), padding: 0 }}>
+                      <button
+                        onClick={() => handleSort("stand")}
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          padding: "11px 14px",
+                          background: "transparent",
+                          border: "none",
+                          fontSize: "inherit",
+                          fontWeight: "inherit",
+                          color: "inherit",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        {isPitcher ? "Throws" : "Stand"} <SortIcon active={sortKey === "stand"} dir={sortDir} />
+                      </button>
+                    </th>
+                    <th style={{ ...thStyle("status"), padding: 0 }}>
+                      <button
+                        onClick={() => handleSort("status")}
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          padding: "11px 14px",
+                          background: "transparent",
+                          border: "none",
+                          fontSize: "inherit",
+                          fontWeight: "inherit",
+                          color: "inherit",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        Status <SortIcon active={sortKey === "status"} dir={sortDir} />
+                      </button>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
