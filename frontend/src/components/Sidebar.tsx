@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react"
 import { useNavigate } from "react-router"
 
 const navItems = [
@@ -9,11 +10,39 @@ const navItems = [
 
 interface SidebarProps {
   activePath: string
-  username: string
 }
 
-export default function Sidebar({ activePath, username }: SidebarProps) {
+export default function Sidebar({ activePath }: SidebarProps) {
   const navigate = useNavigate()
+
+  const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await fetch("http://localhost:8000/auth/me", {
+          credentials: "include",
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setUserEmail(data.email)
+        } else {
+          setUserEmail(null)
+        }
+      } catch (err) {
+        console.error("Failed to fetch user:", err)
+        setUserEmail(null)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchUser()
+  }, [])
+
+  const handleLogin = () => {
+    navigate("/login")
+  }
 
   const handleLogout = async () => {
     try {
@@ -24,8 +53,10 @@ export default function Sidebar({ activePath, username }: SidebarProps) {
     } catch (error) {
       console.error("Logout error:", error)
     } finally {
-      // Always navigate to login, even if the request failed
-      navigate("/login")
+      // Always navigate to root, even if the request failed.
+      // This way users are redirected to the main dashboard.
+      setUserEmail(null)
+      navigate("/")
     }
   }
 
@@ -59,18 +90,29 @@ export default function Sidebar({ activePath, username }: SidebarProps) {
 
       {/* User */}
       <div style={{ padding: "16px 12px 0", borderTop: "0.5px solid rgba(255,255,255,0.07)", marginTop: 12 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px" }}>
-          <div style={{ width: 30, height: 30, borderRadius: "50%", background: "rgba(60, 30, 192, 0.2)", border: "1px solid rgba(65, 30, 192, 0.4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 600, color: "rgb(112, 79, 230)" }}>
-            {username.charAt(0).toUpperCase()}
+        {loading ? (
+          <div style={{ padding: "8px 10px", fontSize: 14, color: "rgba(255,255,255,0.5)" }}>Loading…</div>
+        ) : userEmail ? (
+          <>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px" }}>
+              <div style={{ width: 30, height: 30, borderRadius: "50%", background: "rgba(60, 30, 192, 0.2)", border: "1px solid rgba(65, 30, 192, 0.4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 600, color: "rgb(112, 79, 230)" }}>
+                {userEmail.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 500, color: "#f0ede6" }}>{userEmail}</div>
+              </div>
+            </div>
+            <div onClick={handleLogout}
+              style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 6, fontSize: 15, fontWeight: 500, color: "rgba(145, 136, 250, 0.6)", cursor: "pointer" }}>
+              ↩ Log out
+            </div>
+          </>
+        ) : (
+          <div onClick={handleLogin}
+            style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 6, fontSize: 15, fontWeight: 500, color: "rgba(145, 136, 250, 0.6)", cursor: "pointer" }}>
+            ↪ Log In
           </div>
-          <div>
-            <div style={{ fontSize: 17, fontWeight: 500, color: "#f0ede6" }}>{username}</div>
-          </div>
-        </div>
-        <div onClick={handleLogout}
-          style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 6, fontSize: 15, fontWeight: 500, color: "rgba(145, 136, 250, 0.6)", cursor: "pointer" }}>
-          ↩ Log out
-        </div>
+        )}
       </div>
     </aside>
   )

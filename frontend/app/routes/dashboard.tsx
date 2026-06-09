@@ -70,7 +70,7 @@ export default function Dashboard() {
     <div style={{ display: "flex", height: "100vh", fontFamily: "'DM Sans', sans-serif", backgroundImage: "url(https://sportshub.cbsistatic.com/i/2026/06/04/142ed39a-4787-4489-bdb4-83b19d3cbdb5/skenes-getty.png)", backgroundSize: "cover", backgroundPosition:"center-top"}}>
 
       {/* Sidebar */}
-      <Sidebar activePath="/" username="Fausto" />
+      <Sidebar activePath="/" />
 
       {/* Main */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
