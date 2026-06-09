@@ -131,7 +131,7 @@ export default function Login() {
         </button>
 
         {error && (
-          <div style={{ marginBottom: 16, fontSize: 14, color: "#ff6b6b", textAlign: "center" }}>
+          <div role="alert" aria-live="polite" style={{ marginBottom: 16, fontSize: 14, color: "#ff6b6b", textAlign: "center" }}>
             {error}
           </div>
         )}
