@@ -6,7 +6,8 @@ import pandas as pd
 import lightgbm as lgb
 from sklearn.metrics import log_loss, accuracy_score, confusion_matrix
 
-DATA_DIR = Path("./data")
+DATA_DIR = Path("../data")
+# Path canónico de modelos (MODELO/models), de donde leen predict.py y MonteCarlo.py.
 MODELS_DIR = Path("./models")
 MODELS_DIR.mkdir(exist_ok=True)
 

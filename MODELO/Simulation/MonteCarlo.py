@@ -17,21 +17,40 @@ from tqdm import tqdm
 
 from GameState import GameState
 from Simulador import play_game
+import mlb_stats  # stats OFICIALES de MLB (misma fuente que build_features.py)
 
 import importlib.util
-spec = importlib.util.spec_from_file_location("model_sampler", "Model_sampler.py")
+# Rutas ancladas al archivo (no al cwd): funciona desde cualquier directorio.
+_SIM_DIR = Path(__file__).resolve().parent          # .../MODELO/Simulation
+_BASE_DIR = _SIM_DIR.parent                          # .../MODELO
+spec = importlib.util.spec_from_file_location("model_sampler", _SIM_DIR / "Model_sampler.py")
 model_sampler_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(model_sampler_module)
 
 ModelSampler              = model_sampler_module.ModelSampler
 TeamLineup                = model_sampler_module.TeamLineup
+BatterProfile             = model_sampler_module.BatterProfile
+PitcherProfile            = model_sampler_module.PitcherProfile
 build_player_profiles     = model_sampler_module.build_player_profiles
 build_lineup_from_ids     = model_sampler_module.build_lineup_from_ids
 
 
-DATA_DIR = Path("./data")
-MODELS_DIR = Path("./models")
+DATA_DIR = _BASE_DIR / "data"
+MODELS_DIR = _BASE_DIR / "models"
 BOXSCORE_CACHE_DIR = DATA_DIR / "boxscore_cache"
+
+# --- Fuente de perfiles de jugador: stats OFICIALES de MLB ------------------
+# DEBE coincidir con build_features.py (misma temporada fuente, mismos
+# thresholds y misma imputación) para que la simulación reciba features de la
+# misma distribución con la que se entrenó el modelo (sin train/serve skew).
+SOURCE_SEASON  = 2024
+MIN_PA_BATTER  = 100
+MIN_PA_PITCHER = 50
+LEAGUE_AVG = {
+    "avg": 0.243, "obp": 0.312, "slg": 0.399, "iso": 0.156,
+    "k_rate": 0.226, "bb_rate": 0.082, "hr_rate": 0.029,
+}
+_RATE_COLS = ["avg", "obp", "slg", "iso", "k_rate", "bb_rate", "hr_rate"]
 
 N_SIMS_PER_GAME = 1000
 N_GAMES_TO_VALIDATE = None
@@ -69,6 +88,51 @@ def build_bullpen_map(cache_dir: Path = BOXSCORE_CACHE_DIR) -> dict:
     return bullpens
 
 
+def _impute_official(metrics: dict, min_pa: int) -> dict:
+    """pa < min_pa -> stats a liga promedio (conserva pa_count). Igual que build_features.py."""
+    if metrics["pa_count"] < min_pa:
+        return {"pa_count": metrics["pa_count"], **{c: LEAGUE_AVG[c] for c in _RATE_COLS}}
+    return metrics
+
+
+def build_official_profiles(season: int) -> tuple[dict, dict]:
+    """
+    {id: BatterProfile} y {id: PitcherProfile} desde las stats OFICIALES de MLB
+    (mlb_stats), con el MISMO threshold/imputación que build_features.py. Así los
+    perfiles que alimentan la simulación coinciden con las features de entrenamiento.
+
+    Los jugadores AUSENTES en la temporada fuente (rookies) no entran aquí: los
+    resuelve build_lineup_from_ids con promedio de liga (is_rookie/is_new=True).
+    """
+    stats = mlb_stats.season_stats(season)
+    batters_raw, pitchers_raw = stats["batters"], stats["pitchers"]
+
+    # Lateralidad oficial (people API, cacheada) para todos los IDs con stats.
+    hand = mlb_stats._handedness(list(batters_raw) + list(pitchers_raw))
+
+    batter_profiles = {}
+    for pid, metrics in batters_raw.items():
+        m = _impute_official(metrics, MIN_PA_BATTER)
+        batter_profiles[pid] = BatterProfile(
+            batter_id=pid, stand=hand.get(pid, {}).get("bat", "R"),
+            pa_count=m["pa_count"], avg=m["avg"], obp=m["obp"], slg=m["slg"],
+            iso=m["iso"], k_rate=m["k_rate"], bb_rate=m["bb_rate"],
+            hr_rate=m["hr_rate"], is_rookie=False,
+        )
+
+    pitcher_profiles = {}
+    for pid, metrics in pitchers_raw.items():
+        m = _impute_official(metrics, MIN_PA_PITCHER)
+        pitcher_profiles[pid] = PitcherProfile(
+            pitcher_id=pid, throws=hand.get(pid, {}).get("throw", "R"),
+            pa_count=m["pa_count"], avg=m["avg"], obp=m["obp"], slg=m["slg"],
+            iso=m["iso"], k_rate=m["k_rate"], bb_rate=m["bb_rate"],
+            hr_rate=m["hr_rate"], is_new=False,
+        )
+
+    return batter_profiles, pitcher_profiles
+
+
 def load_artifacts():
     print("Cargando artefactos...")
     model_path = MODELS_DIR / "pa_model.txt"
@@ -77,9 +141,8 @@ def load_artifacts():
     )[0].tolist()
 
 
-    print("  Construyendo profiles de jugadores desde 2024...")
-    pa_2024 = pd.read_parquet(DATA_DIR / "pa_2024.parquet")
-    batter_profiles, pitcher_profiles = build_player_profiles(pa_2024)
+    print(f"  Construyendo profiles OFICIALES de jugadores ({SOURCE_SEASON})...")
+    batter_profiles, pitcher_profiles = build_official_profiles(SOURCE_SEASON)
     print(f"    {len(batter_profiles):,} bateadores, {len(pitcher_profiles):,} pitchers")
 
     

@@ -1,13 +1,21 @@
 """ aqui buscamos relacionar las estadiscticas de cada bateador y pitcher para poder tener una aproximación
     real de que tan bien bate ciertos bateadores contra los pitchers"""
 
+import sys
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
+# Cliente compartido de stats oficiales de MLB (vive en Simulation/).
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "Simulation"))
+import mlb_stats
 
 DATA_DIR = Path("../data")
+
+# Temporada FUENTE de las stats de jugador. Debe ser ANTERIOR a las labels
+# (las labels son PAs de 2025) para no filtrar informacion del futuro.
+SOURCE_SEASON = 2024
 
 MIN_PA_BATTER = 100
 MIN_PA_PITCHER = 50
@@ -21,86 +29,6 @@ LEAGUE_AVG = {
     "bb_rate":  0.082,
     "hr_rate":  0.029,
 }
-
-def compute_batter_stats(pa_2024: pd.DataFrame) -> pd.DataFrame:
-
-
-    df = pa_2024.copy()
-    df["is_K"]   = (df["pa_outcome"] == "K").astype(int)
-    df["is_BB"]  = (df["pa_outcome"] == "BB").astype(int)
-    df["is_HBP"] = (df["pa_outcome"] == "HBP").astype(int)
-    df["is_1B"]  = (df["pa_outcome"] == "1B").astype(int)
-    df["is_2B"]  = (df["pa_outcome"] == "2B").astype(int)
-    df["is_3B"]  = (df["pa_outcome"] == "3B").astype(int)
-    df["is_HR"]  = (df["pa_outcome"] == "HR").astype(int)
-    df["is_OUT"] = (df["pa_outcome"] == "OUT").astype(int)
-    df["is_hit"] = df["is_1B"] + df["is_2B"] + df["is_3B"] + df["is_HR"]
-    df["total_bases"] = df["is_1B"] + 2*df["is_2B"] + 3*df["is_3B"] + 4*df["is_HR"]
-
-
-    grouped = df.groupby("batter").agg(
-        pa_count=("batter", "size"),
-        hits=("is_hit", "sum"),
-        walks=("is_BB", "sum"),
-        hbp=("is_HBP", "sum"),
-        strikeouts=("is_K", "sum"),
-        homeruns=("is_HR", "sum"),
-        total_bases=("total_bases", "sum"),
-    )
-
-    grouped["at_bats"] = grouped["pa_count"] - grouped["walks"] - grouped["hbp"]
-    grouped["at_bats"] = grouped["at_bats"].clip(lower=1)
-
-    grouped["avg"]     = grouped["hits"] / grouped["at_bats"]
-    grouped["obp"]     = (grouped["hits"] + grouped["walks"] + grouped["hbp"]) / grouped["pa_count"]
-    grouped["slg"]     = grouped["total_bases"] / grouped["at_bats"]
-    grouped["iso"]     = grouped["slg"] - grouped["avg"]
-    grouped["k_rate"]  = grouped["strikeouts"] / grouped["pa_count"]
-    grouped["bb_rate"] = grouped["walks"] / grouped["pa_count"]
-    grouped["hr_rate"] = grouped["homeruns"] / grouped["pa_count"]
-
-    return grouped
-
-
-def compute_pitcher_stats(pa_2024: pd.DataFrame) -> pd.DataFrame:
-    """
-    Para cada pitcher, calcula las stats de cómo le batearon en 2024.
-    Es exactamente el mismo cálculo que para bateadores, pero agrupado por
-    pitcher en lugar de batter.
-    """
-    df = pa_2024.copy()
-    df["is_K"]   = (df["pa_outcome"] == "K").astype(int)
-    df["is_BB"]  = (df["pa_outcome"] == "BB").astype(int)
-    df["is_HBP"] = (df["pa_outcome"] == "HBP").astype(int)
-    df["is_1B"]  = (df["pa_outcome"] == "1B").astype(int)
-    df["is_2B"]  = (df["pa_outcome"] == "2B").astype(int)
-    df["is_3B"]  = (df["pa_outcome"] == "3B").astype(int)
-    df["is_HR"]  = (df["pa_outcome"] == "HR").astype(int)
-    df["is_hit"] = df["is_1B"] + df["is_2B"] + df["is_3B"] + df["is_HR"]
-    df["total_bases"] = df["is_1B"] + 2*df["is_2B"] + 3*df["is_3B"] + 4*df["is_HR"]
-
-    grouped = df.groupby("pitcher").agg(
-        pa_count=("pitcher", "size"),
-        hits=("is_hit", "sum"),
-        walks=("is_BB", "sum"),
-        hbp=("is_HBP", "sum"),
-        strikeouts=("is_K", "sum"),
-        homeruns=("is_HR", "sum"),
-        total_bases=("total_bases", "sum"),
-    )
-
-    grouped["at_bats"] = grouped["pa_count"] - grouped["walks"] - grouped["hbp"]
-    grouped["at_bats"] = grouped["at_bats"].clip(lower=1)
-
-    grouped["avg"]     = grouped["hits"] / grouped["at_bats"]
-    grouped["obp"]     = (grouped["hits"] + grouped["walks"] + grouped["hbp"]) / grouped["pa_count"]
-    grouped["slg"]     = grouped["total_bases"] / grouped["at_bats"]
-    grouped["iso"]     = grouped["slg"] - grouped["avg"]
-    grouped["k_rate"]  = grouped["strikeouts"] / grouped["pa_count"]
-    grouped["bb_rate"] = grouped["walks"] / grouped["pa_count"]
-    grouped["hr_rate"] = grouped["homeruns"] / grouped["pa_count"]
-
-    return grouped
 
 def apply_threshold_and_impute(
     stats: pd.DataFrame,
@@ -187,24 +115,21 @@ def print_summary(
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
     print("=" * 60)
-    print("Construyendo features (stats agregadas 2024 → PAs 2025)")
+    print(f"Construyendo features (stats OFICIALES MLB {SOURCE_SEASON} → PAs 2025)")
     print("=" * 60)
 
-    # Cargar datos
-    print("\nCargando datos...")
-    pa_2024 = pd.read_parquet(DATA_DIR / "pa_2024.parquet")
+    # Cargar PAs target (las labels + el contexto del juego). Las stats de
+    # jugador YA NO se computan aqui: salen oficiales de MLB via mlb_stats.
+    print("\nCargando PAs 2025 (target)...")
     pa_2025 = pd.read_parquet(DATA_DIR / "pa_2025.parquet")
-    print(f"  pa_2024: {len(pa_2024):>7,} PAs")
     print(f"  pa_2025: {len(pa_2025):>7,} PAs")
 
-    # Calcular stats agregadas
-    print("\nCalculando stats de bateadores...")
-    batter_stats = compute_batter_stats(pa_2024)
-    print(f"  {len(batter_stats):,} bateadores únicos")
-
-    print("\nCalculando stats de pitchers...")
-    pitcher_stats = compute_pitcher_stats(pa_2024)
-    print(f"  {len(pitcher_stats):,} pitchers únicos")
+    # Stats oficiales de MLB de la temporada fuente (descarga cacheada).
+    print(f"\nDescargando stats oficiales de MLB ({SOURCE_SEASON})...")
+    batter_stats = mlb_stats.batter_frame(SOURCE_SEASON)
+    pitcher_stats = mlb_stats.pitcher_frame(SOURCE_SEASON)
+    print(f"  {len(batter_stats):,} bateadores con stats oficiales")
+    print(f"  {len(pitcher_stats):,} pitchers con stats oficiales")
 
     # Aplicar threshold e imputar bajos PA con liga promedio
     print(f"\nAplicando threshold mínimo: bateadores={MIN_PA_BATTER}, pitchers={MIN_PA_PITCHER}")
