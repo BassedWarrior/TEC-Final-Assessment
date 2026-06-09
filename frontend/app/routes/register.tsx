@@ -36,17 +36,13 @@ export default function Register() {
     setLoading(true)
     setError("")
 
-    const formData = new URLSearchParams()
-    formData.append("email", email)  // email here
-    formData.append("password", password)
-
     try {
       const response = await fetch("http://localhost:8000/auth/register", {
         method: "POST",
         headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
+          "Content-Type": "application/json",
         },
-        body: formData,
+        body: JSON.stringify({ email, password }),
         credentials: "include",  // ← CRITICAL: sends and receives cookies
       })
 
