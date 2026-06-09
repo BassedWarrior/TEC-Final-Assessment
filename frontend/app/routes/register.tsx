@@ -123,8 +123,26 @@ export default function Register() {
             </button>
           </form>
 
-        <a onClick = {() => navigate("/login")}
-        style={{ fontSize: 15, fontWeight: 500, color: "rgba(255, 255, 255, 0.5)", marginTop: 8, cursor: "pointer"}}>Sign In</a>
+        <button
+          onClick = {() => navigate("/login")}
+          style={{
+            background: "none",
+            border: "none",
+            fontSize: 15,
+            fontWeight: 500,
+            color: "rgba(255, 255, 255, 0.5)",
+            marginTop: 8,
+            cursor: "pointer",
+            padding: 0,
+            fontFamily: "inherit",
+            display: "inline-block",
+            textAlign: "left",
+            width: "auto",
+            alignSelf: "flex-start",
+          }}
+        >
+          Sign In
+        </button>
 
         {error && (
           <div style={{ marginBottom: 16, fontSize: 14, color: "#ff6b6b", textAlign: "center" }}>
