@@ -590,6 +590,16 @@ export default function Statistics() {
                     return (
                       <tr key={player.id}
                         onClick={() => setSelected(isSelected ? null : player)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " " ) {
+                            e.preventDefault();
+                            setSelected(isSelected ? null : player);
+                          }
+                        }}
+                        tabIndex={0}
+                        role="button"
+                        aria-pressed={isSelected}
+                        aria-label={ `View details for ${player.name}` }
                         style={{ borderBottom: "0.5px solid rgba(255,255,255,0.04)", cursor: "pointer", background: isSelected ? "rgba(204, 190, 192, 0.3)" : "transparent", transition: "background .12s" }}>
                         <td style={tdStyle}>
                           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
