@@ -6,4 +6,5 @@ export default [
   route("login", "routes/login.tsx"),
   route("statistics", "routes/player_stats.tsx"),
   route("register", "routes/register.tsx")
+  route("history", "routes/history.tsx"),
 ] satisfies RouteConfig;
