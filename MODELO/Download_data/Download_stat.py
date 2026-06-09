@@ -36,8 +36,10 @@ def _statcast_chunk(start_date: str, end_date: str) -> pd.DataFrame:
                 print(f"    [FALLO definitivo] {start_date}→{end_date}: {msg}")
                 raise
             wait = RETRY_SLEEP * attempt
-            print(f"    [reintento {attempt}/{MAX_RETRIES}] {start_date}→{end_date} "
-                  f"falló ({msg}); espero {wait}s")
+            print(
+                f"    [reintento {attempt}/{MAX_RETRIES}] {start_date}→{end_date} "
+                f"falló ({msg}); espero {wait}s"
+            )
             time.sleep(wait)
 
 
@@ -72,7 +74,7 @@ def download_season(year: int, start_date: str, end_date: str) -> pd.DataFrame:
     print(f"\nTemporada {year} bajada:")
     print(f"  Pitches: {len(df):,}")
     print(f"  Columnas: {df.shape[1]}")
-    print(f"  Tiempo: {elapsed/60:.1f} minutos")
+    print(f"  Tiempo: {elapsed / 60:.1f} minutos")
     if len(df):
         print(f"  Memoria: {df.memory_usage(deep=True).sum() / 1e6:.1f} MB")
 
@@ -95,7 +97,9 @@ if __name__ == "__main__":
     for year, (start, end) in SEASONS.items():
         out_path = DATA_DIR / f"statcast_{year}.parquet"
         if out_path.exists():
-            print(f"\n[SKIP] {out_path} ya existe. Bórralo manualmente si quieres re-bajar.")
+            print(
+                f"\n[SKIP] {out_path} ya existe. Bórralo manualmente si quieres re-bajar."
+            )
             continue
 
         df = download_season(year, start, end)

@@ -1,8 +1,10 @@
 import pandas as pd
 from collections import Counter
 import sys
+
 sys.path.insert(0, ".")
 import importlib.util
+
 spec = importlib.util.spec_from_file_location("ms", "Model_sampler.py")
 ms = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(ms)
@@ -39,4 +41,6 @@ for _, row in lineups.iterrows():
     all_ids = list(row["home_batter_ids"]) + list(row["away_batter_ids"])
     if any(b not in batter_profiles for b in all_ids):
         games_with_missing += 1
-print(f"\nJuegos con al menos 1 batter faltante: {games_with_missing}/{len(lineups)} ({100*games_with_missing/len(lineups):.1f}%)")
+print(
+    f"\nJuegos con al menos 1 batter faltante: {games_with_missing}/{len(lineups)} ({100 * games_with_missing / len(lineups):.1f}%)"
+)

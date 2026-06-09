@@ -32,7 +32,7 @@ import requests
 # ---------------------------------------------------------------------------
 # Configuracion
 # ---------------------------------------------------------------------------
-_BASE_DIR = Path(__file__).resolve().parent.parent          # .../MODELO
+_BASE_DIR = Path(__file__).resolve().parent.parent  # .../MODELO
 CACHE_DIR = _BASE_DIR / "data" / "mlb_stats_cache"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -40,31 +40,52 @@ API_STATS = "https://statsapi.mlb.com/api/v1/stats"
 API_PEOPLE = "https://statsapi.mlb.com/api/v1/people"
 TIMEOUT_SECONDS = 30
 RATE_LIMIT_SECONDS = 1.0
-PEOPLE_BATCH = 100          # IDs por request a /people
+PEOPLE_BATCH = 100  # IDs por request a /people
 
 # Umbrales: por debajo de esto el ratio es ruido -> regresa a liga promedio.
 MIN_PA_BATTER = 100
 MIN_PA_PITCHER = 50
 
 LEAGUE_AVG = {
-    "avg":     0.243, "obp":     0.312, "slg":     0.399, "iso":     0.156,
-    "k_rate":  0.226, "bb_rate": 0.082, "hr_rate": 0.029,
+    "avg": 0.243,
+    "obp": 0.312,
+    "slg": 0.399,
+    "iso": 0.156,
+    "k_rate": 0.226,
+    "bb_rate": 0.082,
+    "hr_rate": 0.029,
 }
 
 # Orden de los arrays que consume build_lineup_from_stats / predict.py.
 # DEBE coincidir con BATTER_STAT_FIELDS / PITCHER_STAT_FIELDS en Model_sampler.
 BATTER_ARRAY_FIELDS = [
-    "stand", "pa_count", "avg", "obp", "slg", "iso",
-    "k_rate", "bb_rate", "hr_rate", "is_rookie",
+    "stand",
+    "pa_count",
+    "avg",
+    "obp",
+    "slg",
+    "iso",
+    "k_rate",
+    "bb_rate",
+    "hr_rate",
+    "is_rookie",
 ]
 PITCHER_ARRAY_FIELDS = [
-    "throws", "pa_count", "avg", "obp", "slg", "iso",
-    "k_rate", "bb_rate", "hr_rate", "is_new",
+    "throws",
+    "pa_count",
+    "avg",
+    "obp",
+    "slg",
+    "iso",
+    "k_rate",
+    "bb_rate",
+    "hr_rate",
+    "is_new",
 ]
 
 # Caches en memoria (por proceso)
-_SEASON_CACHE: dict = {}        # (group, season) -> {id: metrics_dict}
-_HAND_CACHE: dict = {}          # id -> {"bat": "R", "throw": "R"}
+_SEASON_CACHE: dict = {}  # (group, season) -> {id: metrics_dict}
+_HAND_CACHE: dict = {}  # id -> {"bat": "R", "throw": "R"}
 
 
 # ---------------------------------------------------------------------------
@@ -90,13 +111,13 @@ def _metrics_from_stat(stat: dict, is_pitcher: bool) -> dict:
     denom = pa if pa > 0 else 1
     return {
         "pa_count": pa,
-        "avg":      avg,
-        "obp":      obp,
-        "slg":      slg,
-        "iso":      slg - avg,
-        "k_rate":   int(stat.get("strikeOuts") or 0) / denom,
-        "bb_rate":  int(stat.get("baseOnBalls") or 0) / denom,
-        "hr_rate":  int(stat.get("homeRuns") or 0) / denom,
+        "avg": avg,
+        "obp": obp,
+        "slg": slg,
+        "iso": slg - avg,
+        "k_rate": int(stat.get("strikeOuts") or 0) / denom,
+        "bb_rate": int(stat.get("baseOnBalls") or 0) / denom,
+        "hr_rate": int(stat.get("homeRuns") or 0) / denom,
     }
 
 
@@ -113,8 +134,12 @@ def _fetch_season_splits(group: str, season: int) -> list:
     resp = requests.get(
         API_STATS,
         params={
-            "stats": "season", "season": season, "group": group,
-            "playerPool": "All", "gameType": "R", "limit": 5000,
+            "stats": "season",
+            "season": season,
+            "group": group,
+            "playerPool": "All",
+            "gameType": "R",
+            "limit": 5000,
         },
         timeout=TIMEOUT_SECONDS,
     )
@@ -188,7 +213,7 @@ def _handedness(ids: list) -> dict:
 
     # Bajar lo que falte en lotes
     for i in range(0, len(missing), PEOPLE_BATCH):
-        batch = missing[i:i + PEOPLE_BATCH]
+        batch = missing[i : i + PEOPLE_BATCH]
         resp = requests.get(
             API_PEOPLE,
             params={"personIds": ",".join(map(str, batch))},
@@ -197,7 +222,7 @@ def _handedness(ids: list) -> dict:
         resp.raise_for_status()
         for p in resp.json().get("people", []):
             _HAND_CACHE[p["id"]] = {
-                "bat":   p.get("batSide", {}).get("code", "R"),
+                "bat": p.get("batSide", {}).get("code", "R"),
                 "throw": p.get("pitchHand", {}).get("code", "R"),
             }
         time.sleep(RATE_LIMIT_SECONDS)
@@ -243,8 +268,16 @@ def batter_array(player_id: int, season: int, hand: Optional[str] = None) -> lis
     if hand is None:
         hand = _handedness([player_id])[player_id]["bat"]
     return [
-        hand, float(m["pa_count"]), m["avg"], m["obp"], m["slg"], m["iso"],
-        m["k_rate"], m["bb_rate"], m["hr_rate"], int(missing),
+        hand,
+        float(m["pa_count"]),
+        m["avg"],
+        m["obp"],
+        m["slg"],
+        m["iso"],
+        m["k_rate"],
+        m["bb_rate"],
+        m["hr_rate"],
+        int(missing),
     ]
 
 
@@ -255,8 +288,16 @@ def pitcher_array(player_id: int, season: int, hand: Optional[str] = None) -> li
     if hand is None:
         hand = _handedness([player_id])[player_id]["throw"]
     return [
-        hand, float(m["pa_count"]), m["avg"], m["obp"], m["slg"], m["iso"],
-        m["k_rate"], m["bb_rate"], m["hr_rate"], int(missing),
+        hand,
+        float(m["pa_count"]),
+        m["avg"],
+        m["obp"],
+        m["slg"],
+        m["iso"],
+        m["k_rate"],
+        m["bb_rate"],
+        m["hr_rate"],
+        int(missing),
     ]
 
 
@@ -281,7 +322,9 @@ def lineup_arrays(
 
     batters = [batter_array(bid, season, hand=hands[bid]["bat"]) for bid in batter_ids]
     pitcher = pitcher_array(pitcher_id, season, hand=hands[pitcher_id]["throw"])
-    bullpen = [pitcher_array(pid, season, hand=hands[pid]["throw"]) for pid in bullpen_ids]
+    bullpen = [
+        pitcher_array(pid, season, hand=hands[pid]["throw"]) for pid in bullpen_ids
+    ]
     return batters, pitcher, bullpen
 
 
@@ -295,10 +338,14 @@ if __name__ == "__main__":
     print(f"Bajando stats oficiales de MLB para {season}...")
     stats = season_stats(season)
     bf, pf = batter_frame(season), pitcher_frame(season)
-    print(f"  Bateadores: {len(bf):>5,}  |  bajo {MIN_PA_BATTER} PA: "
-          f"{(bf['pa_count'] < MIN_PA_BATTER).sum():,}")
-    print(f"  Pitchers:   {len(pf):>5,}  |  bajo {MIN_PA_PITCHER} PA: "
-          f"{(pf['pa_count'] < MIN_PA_PITCHER).sum():,}")
+    print(
+        f"  Bateadores: {len(bf):>5,}  |  bajo {MIN_PA_BATTER} PA: "
+        f"{(bf['pa_count'] < MIN_PA_BATTER).sum():,}"
+    )
+    print(
+        f"  Pitchers:   {len(pf):>5,}  |  bajo {MIN_PA_PITCHER} PA: "
+        f"{(pf['pa_count'] < MIN_PA_PITCHER).sum():,}"
+    )
     print(f"\nCache en: {CACHE_DIR}")
     print("\nEjemplo (array de bateador, Aaron Judge 592450):")
     print(" ", batter_array(592450, season))

@@ -6,20 +6,21 @@ from typing import Callable, Optional
 from GameState import GameState, Outcome
 
 LEAGUE_AVG_FREQUENCIES = {
-    Outcome.STRIKEOUT:    0.226,
-    Outcome.WALK:         0.082,
+    Outcome.STRIKEOUT: 0.226,
+    Outcome.WALK: 0.082,
     Outcome.HIT_BY_PITCH: 0.012,
-    Outcome.SINGLE:       0.141,
-    Outcome.DOUBLE:       0.044,
-    Outcome.TRIPLE:       0.004,
-    Outcome.HOME_RUN:     0.029,
-    Outcome.OUT_IN_PLAY:  0.435,
-    Outcome.DOUBLE_PLAY:  0.020,
-    Outcome.SAC_FLY:      0.007,
+    Outcome.SINGLE: 0.141,
+    Outcome.DOUBLE: 0.044,
+    Outcome.TRIPLE: 0.004,
+    Outcome.HOME_RUN: 0.029,
+    Outcome.OUT_IN_PLAY: 0.435,
+    Outcome.DOUBLE_PLAY: 0.020,
+    Outcome.SAC_FLY: 0.007,
 }
 
 _total = sum(LEAGUE_AVG_FREQUENCIES.values())
 assert abs(_total - 1.0) < 0.001, f"Frecuencias deben sumar 1, suman {_total}"
+
 
 class LeagueAverageSampler:
     def __init__(self, freqs: dict = None, seed: Optional[int] = None):
@@ -27,11 +28,11 @@ class LeagueAverageSampler:
         self.outcomes = list(self.freqs.keys())
         self.weights = list(self.freqs.values())
         self.rng = random.Random(seed)
- 
+
     def __call__(self, state: GameState) -> Outcome:
         # state se ignora en v1; mañana el modelo lo usará
         return self.rng.choices(self.outcomes, weights=self.weights, k=1)[0]
-    
+
 
 @dataclass
 class InningStats:
@@ -40,6 +41,7 @@ class InningStats:
     El equipo visitante (away) batea en el Top y el local (home) en el Bottom,
     así que un mismo `inning_number` agrega ambos medios-innings.
     """
+
     inning_number: int
     home_strikeouts: int = 0
     away_strikeouts: int = 0
@@ -53,21 +55,20 @@ class InningStats:
 
 @dataclass
 class GameResult:
-
-    home_score:int
-    away_score:int
-    innings_played:int
-    total_pas:int
-    home_hits:int
-    away_hits:int
-    home_strikeouts: int    # ← NUEVO
+    home_score: int
+    away_score: int
+    innings_played: int
+    total_pas: int
+    home_hits: int
+    away_hits: int
+    home_strikeouts: int  # ← NUEVO
     away_strikeouts: int
-    went_to_extras:bool
+    went_to_extras: bool
     # Desglose por inning (solo si play_game se llamó con track_innings=True).
     innings: Optional[list] = None
 
     @property
-    def home_won(self)-> bool:
+    def home_won(self) -> bool:
         return self.home_score > self.away_score
 
     @property
@@ -76,6 +77,7 @@ class GameResult:
 
 
 HIT_OUTCOMES = {Outcome.SINGLE, Outcome.DOUBLE, Outcome.TRIPLE, Outcome.HOME_RUN}
+
 
 def play_game(
     sampler: Callable[[GameState], Outcome],
@@ -88,20 +90,27 @@ def play_game(
     total_pas = 0
     home_hits = 0
     away_hits = 0
-    home_strikeouts = 0     # ← NUEVO
+    home_strikeouts = 0  # ← NUEVO
     away_strikeouts = 0
     last_pa_inning = 1
 
     # Acumuladores por inning: {inning_number: {home_runs, away_runs, ...}}.
     # Solo se llenan si track_innings; si no, el overhead es nulo.
     inning_acc = (
-        defaultdict(lambda: {
-            "home_strikeouts": 0, "away_strikeouts": 0,
-            "home_hits": 0, "away_hits": 0,
-            "home_runs": 0, "away_runs": 0,
-            "home_hr": 0, "away_hr": 0,
-        })
-        if track_innings else None
+        defaultdict(
+            lambda: {
+                "home_strikeouts": 0,
+                "away_strikeouts": 0,
+                "home_hits": 0,
+                "away_hits": 0,
+                "home_runs": 0,
+                "away_runs": 0,
+                "home_hr": 0,
+                "away_hr": 0,
+            }
+        )
+        if track_innings
+        else None
     )
 
     while not state.is_game_over():
@@ -110,22 +119,21 @@ def play_game(
                 f"Juego excedió {max_pas} PAs — probable bug en is_game_over o "
                 f"reglas. Estado actual: {state}"
             )
-        outcome= sampler(state)
+        outcome = sampler(state)
 
-        is_home_batting= not state.is_top
+        is_home_batting = not state.is_top
         inning = state.inning
         last_pa_inning = inning
 
         runs = state.apply_outcome(outcome)
 
-        total_pas+=1
-
+        total_pas += 1
 
         if outcome in HIT_OUTCOMES:
             if is_home_batting:
-                home_hits+=1
+                home_hits += 1
             else:
-                away_hits+=1
+                away_hits += 1
         if outcome == Outcome.STRIKEOUT:
             if is_home_batting:
                 home_strikeouts += 1
@@ -146,8 +154,7 @@ def play_game(
     innings = None
     if track_innings:
         innings = [
-            InningStats(inning_number=n, **inning_acc[n])
-            for n in sorted(inning_acc)
+            InningStats(inning_number=n, **inning_acc[n]) for n in sorted(inning_acc)
         ]
 
     return GameResult(
@@ -158,23 +165,23 @@ def play_game(
         home_hits=home_hits,
         away_hits=away_hits,
         # Fue a extras si se jugó al menos un PA en el inning 10 o posterior
-        home_strikeouts=home_strikeouts,    # ← NUEVO
+        home_strikeouts=home_strikeouts,  # ← NUEVO
         away_strikeouts=away_strikeouts,
         went_to_extras=last_pa_inning > 9,
         innings=innings,
     )
-    
-    
+
+
 MLB_BENCHMARKS = {
-    "runs_per_team_per_game":   4.39,  # media de carreras por equipo
-    "runs_std":                 3.10,  # desviación estándar
-    "hits_per_team_per_game":   8.18,  # hits promedio por equipo
-    "pas_per_game":             76.5,  # PAs totales del juego (ambos equipos)
-    "pct_extras":               0.087, # ~8.7% de juegos a extras
-    "home_win_pct":             0.540, # ventaja del local (sin contexto = sampler simétrico = ~50%)
+    "runs_per_team_per_game": 4.39,  # media de carreras por equipo
+    "runs_std": 3.10,  # desviación estándar
+    "hits_per_team_per_game": 8.18,  # hits promedio por equipo
+    "pas_per_game": 76.5,  # PAs totales del juego (ambos equipos)
+    "pct_extras": 0.087,  # ~8.7% de juegos a extras
+    "home_win_pct": 0.540,  # ventaja del local (sin contexto = sampler simétrico = ~50%)
 }
- 
- 
+
+
 def simulate_many(n_games: int = 10_000, seed: int = 42) -> dict:
     """
     Simula n_games juegos con el sampler de liga promedio y reporta estadísticas
@@ -182,34 +189,34 @@ def simulate_many(n_games: int = 10_000, seed: int = 42) -> dict:
     """
     sampler = LeagueAverageSampler(seed=seed)
     results = [play_game(sampler) for _ in range(n_games)]
- 
+
     home_scores = [r.home_score for r in results]
     away_scores = [r.away_score for r in results]
-    all_scores  = home_scores + away_scores
- 
-    home_hits   = [r.home_hits for r in results]
-    away_hits   = [r.away_hits for r in results]
-    all_hits    = home_hits + away_hits
- 
-    total_pas   = [r.total_pas for r in results]
-    extras_pct  = sum(r.went_to_extras for r in results) / n_games
+    all_scores = home_scores + away_scores
+
+    home_hits = [r.home_hits for r in results]
+    away_hits = [r.away_hits for r in results]
+    all_hits = home_hits + away_hits
+
+    total_pas = [r.total_pas for r in results]
+    extras_pct = sum(r.went_to_extras for r in results) / n_games
     home_win_pct = sum(r.home_won for r in results) / n_games
-    tie_pct     = sum(r.is_tie for r in results) / n_games
- 
+    tie_pct = sum(r.is_tie for r in results) / n_games
+
     return {
-        "n_games":                  n_games,
-        "runs_per_team_per_game":   statistics.mean(all_scores),
-        "runs_std":                 statistics.stdev(all_scores),
-        "hits_per_team_per_game":   statistics.mean(all_hits),
-        "pas_per_game":             statistics.mean(total_pas),
-        "pct_extras":               extras_pct,
-        "home_win_pct":             home_win_pct,
-        "tie_pct":                  tie_pct,
-        "max_runs_in_game":         max(all_scores),
-        "shutouts_pct":             sum(1 for s in all_scores if s == 0) / len(all_scores),
+        "n_games": n_games,
+        "runs_per_team_per_game": statistics.mean(all_scores),
+        "runs_std": statistics.stdev(all_scores),
+        "hits_per_team_per_game": statistics.mean(all_hits),
+        "pas_per_game": statistics.mean(total_pas),
+        "pct_extras": extras_pct,
+        "home_win_pct": home_win_pct,
+        "tie_pct": tie_pct,
+        "max_runs_in_game": max(all_scores),
+        "shutouts_pct": sum(1 for s in all_scores if s == 0) / len(all_scores),
     }
- 
- 
+
+
 def print_game_results(results: list[GameResult], max_rows: int = 20) -> None:
     """
     Imprime una tabla con los resultados de los primeros `max_rows` juegos:
@@ -228,15 +235,15 @@ def print_game_results(results: list[GameResult], max_rows: int = 20) -> None:
         print(f"{i:>4} {score:>14} {ks:>14} {extras:>10}")
 
     print("=" * 60)
- 
+
+
 if __name__ == "__main__":
     print("Simulando con sampler de frecuencias promedio de MLB...")
     sampler = LeagueAverageSampler(seed=42)
     results = [play_game(sampler) for _ in range(10_000)]
-    
+
     # Imprimimos los primeros 20 con detalle
     print_game_results(results, max_rows=20)
-    
+
     # Calculamos los aggregates
     stats = simulate_many(n_games=10_000)
- 

@@ -1,5 +1,5 @@
-""" aqui buscamos relacionar las estadiscticas de cada bateador y pitcher para poder tener una aproximación
-    real de que tan bien bate ciertos bateadores contra los pitchers"""
+"""aqui buscamos relacionar las estadiscticas de cada bateador y pitcher para poder tener una aproximación
+real de que tan bien bate ciertos bateadores contra los pitchers"""
 
 import sys
 from pathlib import Path
@@ -21,14 +21,15 @@ MIN_PA_BATTER = 100
 MIN_PA_PITCHER = 50
 
 LEAGUE_AVG = {
-    "avg":      0.243,
-    "obp":      0.312,
-    "slg":      0.399,
-    "iso":      0.156,
-    "k_rate":   0.226,
-    "bb_rate":  0.082,
-    "hr_rate":  0.029,
+    "avg": 0.243,
+    "obp": 0.312,
+    "slg": 0.399,
+    "iso": 0.156,
+    "k_rate": 0.226,
+    "bb_rate": 0.082,
+    "hr_rate": 0.029,
 }
+
 
 def apply_threshold_and_impute(
     stats: pd.DataFrame,
@@ -38,8 +39,9 @@ def apply_threshold_and_impute(
     """
     Para rookies o jugadores lesionados (con menos PA), normalizamos sus stats en el promedio de la liga
     """
-    out = stats[["pa_count", "avg", "obp", "slg", "iso", "k_rate", "bb_rate", "hr_rate"]].copy()
-
+    out = stats[
+        ["pa_count", "avg", "obp", "slg", "iso", "k_rate", "bb_rate", "hr_rate"]
+    ].copy()
 
     low_pa_mask = out["pa_count"] < min_pa
     for col in ["avg", "obp", "slg", "iso", "k_rate", "bb_rate", "hr_rate"]:
@@ -49,8 +51,9 @@ def apply_threshold_and_impute(
     out = out.rename(columns={c: f"{prefix}{c}" for c in out.columns})
     return out
 
+    # Unimos las estaadisticas
 
-    #Unimos las estaadisticas
+
 def merge_features(
     pa_2025: pd.DataFrame,
     batter_stats: pd.DataFrame,
@@ -66,7 +69,15 @@ def merge_features(
     df["b_is_rookie"] = df["b_pa_count"].isna()
 
     # Imputar stats faltantes con promedio de liga
-    for col in ["b_avg", "b_obp", "b_slg", "b_iso", "b_k_rate", "b_bb_rate", "b_hr_rate"]:
+    for col in [
+        "b_avg",
+        "b_obp",
+        "b_slg",
+        "b_iso",
+        "b_k_rate",
+        "b_bb_rate",
+        "b_hr_rate",
+    ]:
         key = col[2:]  # quitar 'b_'
         df[col] = df[col].fillna(LEAGUE_AVG[key])
     df["b_pa_count"] = df["b_pa_count"].fillna(0)
@@ -74,12 +85,21 @@ def merge_features(
     # Merge pitchers
     df = df.merge(pitcher_stats, how="left", left_on="pitcher", right_index=True)
     df["p_is_new"] = df["p_pa_count"].isna()
-    for col in ["p_avg", "p_obp", "p_slg", "p_iso", "p_k_rate", "p_bb_rate", "p_hr_rate"]:
+    for col in [
+        "p_avg",
+        "p_obp",
+        "p_slg",
+        "p_iso",
+        "p_k_rate",
+        "p_bb_rate",
+        "p_hr_rate",
+    ]:
         key = col[2:]
         df[col] = df[col].fillna(LEAGUE_AVG[key])
     df["p_pa_count"] = df["p_pa_count"].fillna(0)
 
     return df
+
 
 def print_summary(
     pa_2025: pd.DataFrame,
@@ -97,16 +117,24 @@ def print_summary(
 
     n_rookies = merged["b_is_rookie"].sum()
     n_new_p = merged["p_is_new"].sum()
-    print(f"\nPAs en 2025 con rookies:       {n_rookies:>6,} ({100*n_rookies/len(merged):.1f}%)")
-    print(f"PAs en 2025 con pitcher nuevo: {n_new_p:>6,} ({100*n_new_p/len(merged):.1f}%)")
+    print(
+        f"\nPAs en 2025 con rookies:       {n_rookies:>6,} ({100 * n_rookies / len(merged):.1f}%)"
+    )
+    print(
+        f"PAs en 2025 con pitcher nuevo: {n_new_p:>6,} ({100 * n_new_p / len(merged):.1f}%)"
+    )
 
     # Top 10 bateadores por PAs en 2024
     print("\nTop 10 bateadores por volumen en 2024:")
-    top_b = batter_stats.nlargest(10, "pa_count")[["pa_count", "avg", "obp", "slg", "k_rate"]]
+    top_b = batter_stats.nlargest(10, "pa_count")[
+        ["pa_count", "avg", "obp", "slg", "k_rate"]
+    ]
     print(top_b.to_string())
 
     print("\nTop 10 pitchers por volumen en 2024:")
-    top_p = pitcher_stats.nlargest(10, "pa_count")[["pa_count", "avg", "k_rate", "bb_rate", "hr_rate"]]
+    top_p = pitcher_stats.nlargest(10, "pa_count")[
+        ["pa_count", "avg", "k_rate", "bb_rate", "hr_rate"]
+    ]
     print(top_p.to_string())
 
 
@@ -132,7 +160,9 @@ if __name__ == "__main__":
     print(f"  {len(pitcher_stats):,} pitchers con stats oficiales")
 
     # Aplicar threshold e imputar bajos PA con liga promedio
-    print(f"\nAplicando threshold mínimo: bateadores={MIN_PA_BATTER}, pitchers={MIN_PA_PITCHER}")
+    print(
+        f"\nAplicando threshold mínimo: bateadores={MIN_PA_BATTER}, pitchers={MIN_PA_PITCHER}"
+    )
     n_low_b = (batter_stats["pa_count"] < MIN_PA_BATTER).sum()
     n_low_p = (pitcher_stats["pa_count"] < MIN_PA_PITCHER).sum()
     print(f"  Bateadores bajo threshold: {n_low_b} (regresan a liga promedio)")
@@ -155,4 +185,3 @@ if __name__ == "__main__":
     print(f"\nGuardado: {out_path.name} ({size_mb:.1f} MB)")
     print(f"Columnas: {merged.shape[1]}")
     print(f"Filas:    {len(merged):,}")
-

@@ -63,7 +63,7 @@ def win_probability_from_stats(
     home_pitcher / away_pitcher: array de stats del abridor.
     *_bullpen: listas opcionales de arrays de relevistas.
     """
-    booster = load_booster(MODEL_PATH)        # cargado una sola vez (cacheado)
+    booster = load_booster(MODEL_PATH)  # cargado una sola vez (cacheado)
     feature_names = _feature_names()
 
     home_lineup = build_lineup_from_stats(
@@ -82,7 +82,7 @@ def win_probability_from_stats(
     )
 
     sampler = ModelSampler(
-        model_path=booster,                   # Booster ya cargado
+        model_path=booster,  # Booster ya cargado
         feature_names=feature_names,
         home_lineup=home_lineup,
         away_lineup=away_lineup,
@@ -166,9 +166,7 @@ def simulate_match_from_stats(
 
     for _ in range(n_sims):
         try:
-            result = play_game(
-                sampler, initial_state=GameState(), track_innings=True
-            )
+            result = play_game(sampler, initial_state=GameState(), track_innings=True)
         except RuntimeError:
             continue  # juego excedió max_pas (raro)
 
@@ -181,31 +179,33 @@ def simulate_match_from_stats(
 
         for inn in result.innings:
             inning_id += 1
-            innings.append({
-                "id":              inning_id,
-                "simulation_id":   sim_id,
-                "inning_number":   inn.inning_number,
-                "home_strikeouts": inn.home_strikeouts,
-                "away_strikeouts": inn.away_strikeouts,
-                "home_hits":       inn.home_hits,
-                "away_hits":       inn.away_hits,
-                "home_runs":       inn.home_runs,
-                "away_runs":       inn.away_runs,
-                "home_hr":         inn.home_hr,
-                "away_hr":         inn.away_hr,
-            })
+            innings.append(
+                {
+                    "id": inning_id,
+                    "simulation_id": sim_id,
+                    "inning_number": inn.inning_number,
+                    "home_strikeouts": inn.home_strikeouts,
+                    "away_strikeouts": inn.away_strikeouts,
+                    "home_hits": inn.home_hits,
+                    "away_hits": inn.away_hits,
+                    "home_runs": inn.home_runs,
+                    "away_runs": inn.away_runs,
+                    "home_hr": inn.home_hr,
+                    "away_hr": inn.away_hr,
+                }
+            )
 
     wp_home = home_wins / valid_sims if valid_sims > 0 else 0.5
 
     return {
         "match": {
-            "id":         match_id,
-            "home_wp":    round(wp_home, 4),
-            "away_wp":    round(1.0 - wp_home, 4),
+            "id": match_id,
+            "home_wp": round(wp_home, 4),
+            "away_wp": round(1.0 - wp_home, 4),
             "total_sims": valid_sims,
         },
         "simulations": simulations,
-        "innings":     innings,
+        "innings": innings,
     }
 
 
@@ -226,7 +226,9 @@ def to_nested(out: dict) -> dict:
     for sim in out["simulations"]:
         sid = sim["id"]
         sim_innings = {}
-        for inn in sorted(innings_by_sim.get(sid, []), key=lambda x: x["inning_number"]):
+        for inn in sorted(
+            innings_by_sim.get(sid, []), key=lambda x: x["inning_number"]
+        ):
             sim_innings[f"inning_{inn['inning_number']}"] = {
                 "Home_STKO": inn["home_strikeouts"],
                 "Away_STKO": inn["away_strikeouts"],
@@ -234,14 +236,14 @@ def to_nested(out: dict) -> dict:
                 "Away_Hits": inn["away_hits"],
                 "Home_Runs": inn["home_runs"],
                 "Away_Runs": inn["away_runs"],
-                "Home_HR":   inn["home_hr"],
-                "Away_HR":   inn["away_hr"],
+                "Home_HR": inn["home_hr"],
+                "Away_HR": inn["away_hr"],
             }
         simulations[f"sim_{sid}"] = sim_innings
 
     return {
-        "Home_wp":     out["match"]["home_wp"],
-        "Away_wp":     out["match"]["away_wp"],
+        "Home_wp": out["match"]["home_wp"],
+        "Away_wp": out["match"]["away_wp"],
         "Simulations": simulations,
     }
 
@@ -250,13 +252,16 @@ if __name__ == "__main__":
     # Demo: lineup élite (home) vs lineup débil (away).
     # Array: [mano, pa_count, avg, obp, slg, iso, k_rate, bb_rate, hr_rate, flag]
     elite_b = ["R", 600, 0.310, 0.420, 0.580, 0.270, 0.150, 0.130, 0.060, 0]
-    weak_b  = ["R", 300, 0.220, 0.280, 0.330, 0.110, 0.280, 0.060, 0.015, 0]
+    weak_b = ["R", 300, 0.220, 0.280, 0.330, 0.110, 0.280, 0.060, 0.015, 0]
     elite_p = ["R", 700, 0.210, 0.270, 0.330, 0.120, 0.300, 0.060, 0.020, 0]
-    weak_p  = ["R", 600, 0.280, 0.350, 0.470, 0.190, 0.170, 0.090, 0.040, 0]
+    weak_p = ["R", 600, 0.280, 0.350, 0.470, 0.190, 0.170, 0.090, 0.040, 0]
 
     out = win_probability_from_stats(
-        home_batters=[elite_b] * 9, home_pitcher=elite_p,
-        away_batters=[weak_b] * 9,  away_pitcher=weak_p,
-        n_sims=300, seed=42,
+        home_batters=[elite_b] * 9,
+        home_pitcher=elite_p,
+        away_batters=[weak_b] * 9,
+        away_pitcher=weak_p,
+        n_sims=300,
+        seed=42,
     )
     print(out)  # wp_home esperado: alto (>0.7)

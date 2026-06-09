@@ -101,7 +101,7 @@ def extract_lineup(boxscore: dict, side: str) -> Optional[dict]:
         pitcher_id = int(pitcher_ids[0])
 
         return {
-            "team_name":  team_name,
+            "team_name": team_name,
             "batter_ids": batter_ids,
             "pitcher_id": pitcher_id,
         }
@@ -122,14 +122,14 @@ def process_game(game_pk: int, game_date: str) -> Optional[dict]:
         return None
 
     return {
-        "game_pk":           game_pk,
-        "game_date":         game_date,
-        "home_team":         home["team_name"],
-        "away_team":         away["team_name"],
-        "home_batter_ids":   home["batter_ids"],
-        "home_pitcher_id":   home["pitcher_id"],
-        "away_batter_ids":   away["batter_ids"],
-        "away_pitcher_id":   away["pitcher_id"],
+        "game_pk": game_pk,
+        "game_date": game_date,
+        "home_team": home["team_name"],
+        "away_team": away["team_name"],
+        "home_batter_ids": home["batter_ids"],
+        "home_pitcher_id": home["pitcher_id"],
+        "away_batter_ids": away["batter_ids"],
+        "away_pitcher_id": away["pitcher_id"],
     }
 
 
@@ -143,16 +143,25 @@ if __name__ == "__main__":
 
     # Cargar test set para saber qué juegos necesitamos
     test = pd.read_parquet(DATA_DIR / "test.parquet")
-    unique_games = test[["game_pk", "game_date"]].drop_duplicates().reset_index(drop=True)
+    unique_games = (
+        test[["game_pk", "game_date"]].drop_duplicates().reset_index(drop=True)
+    )
     print(f"\nJuegos únicos en test set: {len(unique_games):,}")
-    print(f"Rango de fechas: {unique_games['game_date'].min()} → {unique_games['game_date'].max()}")
+    print(
+        f"Rango de fechas: {unique_games['game_date'].min()} → {unique_games['game_date'].max()}"
+    )
 
     # Contar cuántos ya están en caché
-    cached = sum(1 for _, row in unique_games.iterrows()
-                 if (CACHE_DIR / f"{row['game_pk']}.json").exists())
+    cached = sum(
+        1
+        for _, row in unique_games.iterrows()
+        if (CACHE_DIR / f"{row['game_pk']}.json").exists()
+    )
     print(f"En caché:        {cached:,}")
     print(f"A descargar:     {len(unique_games) - cached:,}")
-    print(f"Tiempo estimado: ~{(len(unique_games) - cached) * RATE_LIMIT_SECONDS / 60:.1f} minutos")
+    print(
+        f"Tiempo estimado: ~{(len(unique_games) - cached) * RATE_LIMIT_SECONDS / 60:.1f} minutos"
+    )
 
     # Procesar todos los juegos
     print(f"\nDescargando...")
