@@ -67,7 +67,7 @@ export const MOCK_HISTORY: SimulationResult[] = [
     away: {
       batters: [MOCK_BATTERS[2], MOCK_BATTERS[4], MOCK_BATTERS[2], MOCK_BATTERS[4], MOCK_BATTERS[2], MOCK_BATTERS[4], MOCK_BATTERS[2], MOCK_BATTERS[4], MOCK_BATTERS[2]],
       pitchers: [MOCK_PITCHERS[0], MOCK_PITCHERS[2]],
-      hits: 8, strikeouts: 10, homeruns: 1, score: 4,
+      hits: 8, strikeouts: 10, homeruns: 1, score: 1,
     },
   },
 ]
