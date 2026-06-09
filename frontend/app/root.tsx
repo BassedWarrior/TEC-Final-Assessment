@@ -33,7 +33,21 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
-        {children}
+        <a href="#main-content" style={{
+          position: "absolute",
+          top: "-40px",
+          left: 0,
+          background: "#e84057",
+          color: "white",
+          padding: "8px",
+          zIndex: 100,
+          textDecoration: "none",
+        }} onFocus={(e) => e.currentTarget.style.top = "0"} onBlur={(e) => e.currentTarget.style.top = "-40px"}>
+          Skip to main content
+        </a>
+        <main id="main-content" tabIndex={-1}>
+          {children}
+        </main>
         <ScrollRestoration />
         <Scripts />
       </body>
