@@ -1,18 +1,36 @@
 import { useState } from "react"
 import { useNavigate } from "react-router"
 
-export default function Login() {
+export default function Register() {
   const navigate = useNavigate()
-  const [username, setUsername] = useState("")
+  const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [confpassword, setConfirmPassword] = useState("")
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()  // Prevent browser from reloading, or fetching GET
 
-    if (!username || !password) {
+    const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if(! pattern.test(email)){
+      setError("Email must be a valid email")
+      return
+    }
+
+    if(password.length < 8){
+      setError("Password must be at least 8 characters long ")
+      return
+    }
+
+    if(confpassword != password) {
+      setError("Passwords do not match")
+      return
+    }
+
+    if (!email || !password) {
       setError("Please enter both email and password")
       return
     }
@@ -20,23 +38,19 @@ export default function Login() {
     setLoading(true)
     setError("")
 
-    const formData = new URLSearchParams()
-    formData.append("username", username)   // email here
-    formData.append("password", password)
-
     try {
-      const response = await fetch("http://localhost:8000/auth/login", {
+      const response = await fetch("http://localhost:8000/auth/register", {
         method: "POST",
         headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
+          "Content-Type": "application/json",
         },
-        body: formData,
-        credentials: "include",   // ← CRITICAL: sends and receives cookies
+        body: JSON.stringify({ email, password }),
+        credentials: "include",  // ← CRITICAL: sends and receives cookies
       })
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.detail || "Login failed")
+        throw new Error(errorData.detail || "Registration failed")
       }
 
       // No need to store token – the httpOnly cookie is automatically saved
@@ -49,7 +63,6 @@ export default function Login() {
   }
 
   const mba_red = "#89082d"
-  const mba_blue = "#001840"
   const light_blue = "rgb(50, 38, 209)"
 
   return (
@@ -57,7 +70,7 @@ export default function Login() {
 
       {/* Left panel */}
       <div style={{ flex: "1.1", position: "relative", display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: 48, overflow: "hidden" }}>
-        <div style={{ position: "absolute", inset: 0, backgroundImage: "url('https://d1z5o5vuzqe9y4.cloudfront.net/uploads/Baseball-and-The-Tenth-Inning/Barry-Bonds-connects-June-2001-Brad-Mangin-1.jpg')", backgroundSize: "cover", backgroundPosition: "center top", filter: "brightness(0.7) saturate(0.7)" }} />
+        <div style={{ position: "absolute", inset: 0, backgroundImage: "url('https://img.mlbstatic.com/mlb-mobile/oms/1920x1080_MLBTV__laa_1_kgtcth')", backgroundSize: "cover", backgroundPosition: "center top", filter: "brightness(0.7) saturate(0.7)" }} />
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(8,12,16,0.97) 0%, rgba(8, 12, 16, 0.11) 60%, transparent 100%)" }} />
         <div style={{ position: "relative", zIndex: 2 }}>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(24, 15, 124, 0.4)", border: "0.5px solid mba_red", borderRadius: 4, padding: "4px 10px", fontSize: 15, fontWeight: 500, color: "white", letterSpacing: ".12em", textTransform: "uppercase", marginBottom: 14 }}>
@@ -82,13 +95,15 @@ export default function Login() {
 
       {/* Right panel */}
       <div style={{ width: 600, flexShrink: 0, background: "#0d1117", borderLeft: "0.5px solid mba_blue", display: "flex", flexDirection: "column", justifyContent: "center", padding: "40px 44px" }}>
-        <p style={{ fontSize: 17, fontWeight: 500, color: "rgba(219, 218, 238, 0.5)", letterSpacing: ".14em", textTransform: "uppercase", marginBottom: 8 }}>Welcome back</p>
-        <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 35, fontWeight: 700, color: "white", marginBottom: 32 }}>Sign in</h2>
+        <p style={{ fontSize: 17, fontWeight: 500, color: "rgba(219, 218, 238, 0.5)", letterSpacing: ".14em", textTransform: "uppercase", marginBottom: 8 }}>Welcome</p>
+        <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 35, fontWeight: 700, color: "white", marginBottom: 32 }}>Sign Up</h2>
 
           <form onSubmit={handleSubmit}>
             {[
-              { label: "Email", type: "text", val: username, set: setUsername, placeholder: "email@example.com" },
+              { label: "Email", type: "text", val: email, set: setEmail, placeholder: "email@example.com" },
               { label: "Password", type: "password", val: password, set: setPassword, placeholder: "••••••••" },
+              { label: "Confirm Password", type: "password", val: confpassword, set: setConfirmPassword, placeholder: "••••••••" },
+
             ].map(f => (
               <div key={f.label} style={{ marginBottom: 16 }}>
                 <label style={{ display: "block", fontSize: 18, fontWeight: 500, color: "rgba(255, 255, 255, 0.81)", letterSpacing: ".06em", marginBottom: 6 }}>{f.label}</label>
@@ -101,16 +116,15 @@ export default function Login() {
                 />
               </div>
             ))}
-
             <button type="submit"
               disabled={loading}
               style={{ width: "100%", padding: 12, background: mba_red, border: "none", borderRadius: 6, fontSize: 16, fontWeight: 500, color: "#fff", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", letterSpacing: ".04em", opacity: loading ? 0.7 : 1 }}>
-              {loading ? "Signing in..." : "Sign in →"}
+              {loading ? "Creating Account..." : "Create Account"}
             </button>
           </form>
 
         <button
-          onClick = {() => navigate("/register", { replace: true })}
+          onClick = {() => navigate("/login", { replace: true })}
           style={{
             background: "none",
             border: "none",
@@ -127,7 +141,7 @@ export default function Login() {
             alignSelf: "flex-start",
           }}
         >
-          Create Account
+          Sign In
         </button>
 
         {error && (

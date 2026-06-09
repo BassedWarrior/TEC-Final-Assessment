@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react"
 import { useNavigate } from "react-router"
 
 const navItems = [
@@ -9,11 +10,65 @@ const navItems = [
 
 interface SidebarProps {
   activePath: string
-  username: string
 }
 
-export default function Sidebar({ activePath, username }: SidebarProps) {
+export default function Sidebar({ activePath }: SidebarProps) {
   const navigate = useNavigate()
+
+  const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await fetch("http://localhost:8000/auth/me", {
+          credentials: "include",
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setUserEmail(data.email)
+        } else {
+          setUserEmail(null)
+        }
+      } catch (err) {
+        console.error("Failed to fetch user:", err)
+        setUserEmail(null)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchUser()
+  }, [])
+
+  const handleLogin = () => {
+    navigate("/login")
+  }
+
+  const handleLogout = async () => {
+    try {
+      await fetch("http://localhost:8000/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      })
+    } catch (error) {
+      console.error("Logout error:", error)
+    } finally {
+      // Always navigate to root, even if the request failed.
+      // This way users are redirected to the main dashboard.
+      setUserEmail(null)
+      navigate("/", { replace: true })
+    }
+  }
+
+  // Deterministic hash for consistent email-based color
+  function hashCode(str: string): number {
+    let hash = 0
+    for (let i = 0; i < str.length; i++) {
+      hash = ((hash << 5) - hash) + str.charCodeAt(i)
+      hash |= 0 // Convert to 32-bit integer
+    }
+    return Math.abs(hash)
+  }
 
   return (
     <aside style={{ width: 200, flexShrink: 0, background: "#0d1117", borderRight: "0.5px solid rgba(255,255,255,0.07)", display: "flex", flexDirection: "column", padding: "28px 0" }}>
@@ -45,18 +100,51 @@ export default function Sidebar({ activePath, username }: SidebarProps) {
 
       {/* User */}
       <div style={{ padding: "16px 12px 0", borderTop: "0.5px solid rgba(255,255,255,0.07)", marginTop: 12 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px" }}>
-          <div style={{ width: 30, height: 30, borderRadius: "50%", background: "rgba(60, 30, 192, 0.2)", border: "1px solid rgba(65, 30, 192, 0.4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 600, color: "rgb(112, 79, 230)" }}>
-            {username.charAt(0).toUpperCase()}
+        {loading ? (
+          <div style={{ padding: "8px 10px", fontSize: 14, color: "rgba(255,255,255,0.5)" }}>Loading…</div>
+        ) : userEmail ? (
+          <>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "8px 10px", textAlign: "center" }}>
+              {/* Circle with initial – color derived from email */}
+              <div style={{
+                width: 50,
+                height: 50,
+                borderRadius: "50%",
+                background: `hsl(${hashCode(userEmail) % 360}, 70%, 35%)`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 18,
+                fontWeight: 600,
+                color: "#fff",
+                marginBottom: 8,
+              }}>
+                {userEmail.charAt(0).toUpperCase()}
+              </div>
+              {/* Email with overflow handling */}
+              <div style={{
+                fontSize: 14,
+                fontWeight: 500,
+                color: "#f0ede6",
+                wordBreak: "break-word",      // wrap long words
+                overflowWrap: "break-word",
+                maxWidth: "100%",
+                lineHeight: 1.3,
+              }}>
+                {userEmail}
+              </div>
+            </div>
+            <div onClick={handleLogout}
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "8px 10px", borderRadius: 6, fontSize: 15, fontWeight: 500, color: "rgba(249, 248, 255, 0.87)", cursor: "pointer", marginTop: 4 }}>
+              ↩ Log out
+            </div>
+          </>
+        ) : (
+          <div onClick={handleLogin}
+            style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 6, fontSize: 15, fontWeight: 500, color: "rgba(249, 248, 255, 0.87)", cursor: "pointer" }}>
+            ↪ Log In
           </div>
-          <div>
-            <div style={{ fontSize: 17, fontWeight: 500, color: "#f0ede6" }}>{username}</div>
-          </div>
-        </div>
-        <div onClick={() => navigate("/login")}
-          style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 6, fontSize: 15, fontWeight: 500, color: "rgba(145, 136, 250, 0.6)", cursor: "pointer" }}>
-          ↩ Log out
-        </div>
+        )}
       </div>
     </aside>
   )
