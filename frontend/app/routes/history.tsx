@@ -195,7 +195,6 @@ export default function History() {
                   {filtered.map(result => {
                     const isExpanded = expandedId === result.id
                     const homeWon = result.home.score > result.away.score
-                    const tied = result.home.score === result.away.score
                     const homePlayers = [...result.home.batters, ...result.home.pitchers]
                     const awayPlayers = [...result.away.batters, ...result.away.pitchers]
 
@@ -259,13 +258,11 @@ export default function History() {
 
                           {/* Winner */}
                           <td style={{ ...tdStyle, textAlign: "center" }}>
-                            {tied ? (
-                              <span style={{ fontSize: 15, fontWeight: 600, color: "rgba(255, 255, 255, 0.8)", background: "rgba(255,255,255,0.06)", border: "0.5px solid rgba(255,255,255,0.1)", borderRadius: 5, padding: "3px 10px" }}>Tie</span>
-                            ) : (
+                            {
                               <span style={{ fontSize: 15, fontWeight: 600, color: homeWon ? "rgba(59,130,246,1)" : "rgba(232,64,87,1)", background: "rgba(74,222,128,0.1)", border: "0.5px solid", borderRadius: 5, borderColor:  homeWon ? "rgba(59,130,246,1)" : "rgba(232,64,87,1)",padding: "3px 10px" }}>
                                 {homeWon ? "Home" : "Away"}
                               </span>
-                            )}
+                            }
                           </td>
 
                           {/* Expand */}
@@ -296,7 +293,6 @@ export default function History() {
             [String(MOCK_HISTORY.length), "Total simulations"],
             [String(MOCK_HISTORY.filter(r => r.away.score > r.home.score).length), "Away wins"],
             [String(MOCK_HISTORY.filter(r => r.home.score > r.away.score).length), "Home wins"],
-            [String(MOCK_HISTORY.filter(r => r.home.score === r.away.score).length), "Ties"],
           ].map(([val, lbl], i, arr) => (
             <div key={lbl} style={{ flex: 1, padding: "13px 20px", borderRight: i < arr.length - 1 ? "0.5px solid rgba(255,255,255,0.06)" : "none" }}>
               <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 30, fontWeight: 700, color: "#f0ede6" }}>{val}</div>
