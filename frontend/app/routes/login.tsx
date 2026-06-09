@@ -58,20 +58,20 @@ export default function Login() {
         <div style={{ position: "absolute", inset: 0, backgroundImage: "url('https://d1z5o5vuzqe9y4.cloudfront.net/uploads/Baseball-and-The-Tenth-Inning/Barry-Bonds-connects-June-2001-Brad-Mangin-1.jpg')", backgroundSize: "cover", backgroundPosition: "center top", filter: "brightness(0.7) saturate(0.7)" }} />
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(8,12,16,0.97) 0%, rgba(8, 12, 16, 0.11) 60%, transparent 100%)" }} />
         <div style={{ position: "relative", zIndex: 2 }}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(24, 15, 124, 0.4)", border: "0.5px solid mba_red", borderRadius: 4, padding: "4px 10px", fontSize: 10, fontWeight: 500, color: "white", letterSpacing: ".12em", textTransform: "uppercase", marginBottom: 14 }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(24, 15, 124, 0.4)", border: "0.5px solid mba_red", borderRadius: 4, padding: "4px 10px", fontSize: 15, fontWeight: 500, color: "white", letterSpacing: ".12em", textTransform: "uppercase", marginBottom: 14 }}>
             <div style={{ width: 5, height: 5, borderRadius: "50%", background: light_blue }} /> MLB Predictions
           </div>
           <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 48, fontWeight: 900, color: "#f0ede6", lineHeight: 1.1, marginBottom: 12, letterSpacing: "-.02em" }}>
             Play ball.<br /><span style={{ color: "white"}}>Predict smarter.</span>
           </h1>
-          <p style={{ fontSize: 18, fontWeight: 300, color: "rgba(255, 255, 255, 0.81)", lineHeight: 1.6, maxWidth: 300 }}>
+          <p style={{ fontSize: 18, fontWeight: 500, color: "rgba(255, 255, 255, 0.81)", lineHeight: 1.6, maxWidth: 300 }}>
             Machine learning predictions for every game of the season.
           </p>
           <div style={{ display: "flex", gap: 32, marginTop: 28, paddingTop: 24, borderTop: "0.5px solid rgba(255, 255, 255, 0.48)" }}>
             {[["2,430", "Games analyzed"], ["~65%", "Model accuracy"], ["30", "MLB teams"]].map(([val, lbl]) => (
               <div key={lbl} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
                 <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 25, fontWeight: 500, color: "rgba(225, 222, 234, 0.79)" }}>{val}</span>
-                <span style={{ fontSize: 13, color: "rgba(246, 122, 122, 0.67)", textTransform: "uppercase", letterSpacing: ".08em" }}>{lbl}</span>
+                <span style={{ fontSize: 15, fontWeight: 800, color: "rgba(233, 87, 87, 0.95)", textTransform: "uppercase", letterSpacing: ".08em" }}>{lbl}</span>
               </div>
             ))}
           </div>
@@ -79,7 +79,7 @@ export default function Login() {
       </div>
 
       {/* Right panel */}
-      <div style={{ width: 360, flexShrink: 0, background: "#0d1117", borderLeft: "0.5px solid mba_blue", display: "flex", flexDirection: "column", justifyContent: "center", padding: "40px 44px" }}>
+      <div style={{ width: 600, flexShrink: 0, background: "#0d1117", borderLeft: "0.5px solid mba_blue", display: "flex", flexDirection: "column", justifyContent: "center", padding: "40px 44px" }}>
         <p style={{ fontSize: 17, fontWeight: 500, color: "rgba(219, 218, 238, 0.5)", letterSpacing: ".14em", textTransform: "uppercase", marginBottom: 8 }}>Welcome back</p>
         <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 35, fontWeight: 700, color: "white", marginBottom: 32 }}>Sign in</h2>
 
@@ -94,7 +94,7 @@ export default function Login() {
               placeholder={f.placeholder}
               value={f.val}
               onChange={e => f.set(e.target.value)}
-              style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "11px 14px", fontSize: 16, color: "#f0ede6", fontFamily: "'DM Sans', sans-serif", outline: "none" }}
+              style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "11px 14px", fontSize: 20, color: "rgba(255, 255, 255, 0.89)", fontFamily: "'DM Sans', sans-serif", outline: "none" }}
             />
           </div>
         ))}
