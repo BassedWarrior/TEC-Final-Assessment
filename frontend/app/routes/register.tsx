@@ -130,7 +130,7 @@ export default function Register() {
             border: "none",
             fontSize: 15,
             fontWeight: 500,
-            color: "rgba(255, 255, 255, 0.5)",
+            color: "rgba(255, 255, 255, 0.75)",
             marginTop: 8,
             cursor: "pointer",
             padding: 0,
