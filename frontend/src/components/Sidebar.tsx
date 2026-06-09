@@ -56,7 +56,7 @@ export default function Sidebar({ activePath }: SidebarProps) {
       // Always navigate to root, even if the request failed.
       // This way users are redirected to the main dashboard.
       setUserEmail(null)
-      navigate("/")
+      navigate("/", { replace: true })
     }
   }
 

@@ -40,7 +40,7 @@ export default function Login() {
       }
 
       // No need to store token – the httpOnly cookie is automatically saved
-      navigate("/")
+      navigate("/", { replace: true })
     } catch (err: any) {
       setError(err.message || "An error occurred")
     } finally {
@@ -110,7 +110,7 @@ export default function Login() {
           </form>
 
         <button
-          onClick = {() => navigate("/register")}
+          onClick = {() => navigate("/register", { replace: true })}
           style={{
             background: "none",
             border: "none",
