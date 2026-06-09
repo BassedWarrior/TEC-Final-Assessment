@@ -54,9 +54,17 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
 
 
+class RegisterResponse(UserResponse, TokenResponse):
+    """Response for registration - includes user data and JWT token."""
+
+    pass  # Inherits all attributes. No need to declare manually.
+
+
 # ---------- Endpoints ----------
 @router.post("/register", response_model=UserResponse, status_code=201)
-async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
+async def register(
+    user_data: UserCreate, response: Response, db: AsyncSession = Depends(get_db)
+):
     """
     Create a new user account.
 
@@ -76,10 +84,25 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
     await db.commit()
     await db.refresh(new_user)
 
-    return UserResponse(
+    access_token = create_access_token(data={"sub": str(new_user.id)})
+
+    # Set httpOnly cookie (for React frontend)
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=False,  # Set to True in production (HTTPS only)
+        samesite="lax",
+        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        path="/",
+    )
+
+    return RegisterResponse(
         id=str(new_user.id),
         email=new_user.email,
         created_at=new_user.created_at.isoformat(),
+        access_token=access_token,
+        token_type="bearer",
     )
 
 
