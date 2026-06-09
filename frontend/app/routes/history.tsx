@@ -145,7 +145,7 @@ export default function History() {
   return (
     <div style={{ display: "flex", height: "100vh", fontFamily: "'DM Sans', sans-serif", backgroundImage: "url(https://pix11.com/wp-content/uploads/sites/25/2026/05/APTOPIX_Yankees_Mets_Baseball_26137758631951.jpg?w=2560&h=1440&crop=1)" }}>
       
-      <Sidebar activePath="/history" username="Fausto" />
+      <Sidebar activePath="/history"/>
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
         {/* Topbar */}
@@ -293,6 +293,7 @@ export default function History() {
             [String(MOCK_HISTORY.length), "Total simulations"],
             [String(MOCK_HISTORY.filter(r => r.away.score > r.home.score).length), "Away wins"],
             [String(MOCK_HISTORY.filter(r => r.home.score > r.away.score).length), "Home wins"],
+            [String((MOCK_HISTORY.filter(r => r.home.score > r.away.score).length / MOCK_HISTORY.length * 100).toFixed(2)), "Home Win %"],
           ].map(([val, lbl], i, arr) => (
             <div key={lbl} style={{ flex: 1, padding: "13px 20px", borderRight: i < arr.length - 1 ? "0.5px solid rgba(255,255,255,0.06)" : "none" }}>
               <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 30, fontWeight: 700, color: "#f0ede6" }}>{val}</div>
