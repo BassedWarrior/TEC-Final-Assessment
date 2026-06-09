@@ -13,3 +13,13 @@ body {
     color-scheme: dark;
   }
 }
+
+/* Focus visible for all interactive elements */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid #e84057;
+  outline-offset: 2px;
+}
