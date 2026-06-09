@@ -9,7 +9,9 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
-  const handleLogin = async () => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()  // Prevent browser from reloading, or fetching GET
+
     if (!username || !password) {
       setError("Please enter both email and password")
       return
@@ -83,27 +85,29 @@ export default function Login() {
         <p style={{ fontSize: 17, fontWeight: 500, color: "rgba(219, 218, 238, 0.5)", letterSpacing: ".14em", textTransform: "uppercase", marginBottom: 8 }}>Welcome back</p>
         <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 35, fontWeight: 700, color: "white", marginBottom: 32 }}>Sign in</h2>
 
-        {[
-          { label: "Email", type: "text", val: username, set: setUsername, placeholder: "email@example.com" },
-          { label: "Password", type: "password", val: password, set: setPassword, placeholder: "••••••••" },
-        ].map(f => (
-          <div key={f.label} style={{ marginBottom: 16 }}>
-            <label style={{ display: "block", fontSize: 18, fontWeight: 500, color: "rgba(255, 255, 255, 0.81)", letterSpacing: ".06em", marginBottom: 6 }}>{f.label}</label>
-            <input
-              type={f.type}
-              placeholder={f.placeholder}
-              value={f.val}
-              onChange={e => f.set(e.target.value)}
-              style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "11px 14px", fontSize: 20, color: "rgba(255, 255, 255, 0.89)", fontFamily: "'DM Sans', sans-serif", outline: "none" }}
-            />
-          </div>
-        ))}
+          <form onSubmit={handleSubmit}>
+            {[
+              { label: "Email", type: "text", val: username, set: setUsername, placeholder: "email@example.com" },
+              { label: "Password", type: "password", val: password, set: setPassword, placeholder: "••••••••" },
+            ].map(f => (
+              <div key={f.label} style={{ marginBottom: 16 }}>
+                <label style={{ display: "block", fontSize: 18, fontWeight: 500, color: "rgba(255, 255, 255, 0.81)", letterSpacing: ".06em", marginBottom: 6 }}>{f.label}</label>
+                <input
+                  type={f.type}
+                  placeholder={f.placeholder}
+                  value={f.val}
+                  onChange={e => f.set(e.target.value)}
+                  style={{ width: "100%", background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "11px 14px", fontSize: 20, color: "rgba(255, 255, 255, 0.89)", fontFamily: "'DM Sans', sans-serif", outline: "none" }}
+                />
+              </div>
+            ))}
 
-        <button onClick={handleLogin}
-          disabled={loading}
-          style={{ width: "100%", padding: 12, background: mba_red, border: "none", borderRadius: 6, fontSize: 16, fontWeight: 500, color: "#fff", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", letterSpacing: ".04em", opacity: loading ? 0.7 : 1 }}>
-          {loading ? "Signing in..." : "Sign in →"}
-        </button>
+            <button type="submit"
+              disabled={loading}
+              style={{ width: "100%", padding: 12, background: mba_red, border: "none", borderRadius: 6, fontSize: 16, fontWeight: 500, color: "#fff", fontFamily: "'DM Sans', sans-serif", cursor: "pointer", letterSpacing: ".04em", opacity: loading ? 0.7 : 1 }}>
+              {loading ? "Signing in..." : "Sign in →"}
+            </button>
+          </form>
 
         <a onClick = {() => navigate("/register")}
         style={{ fontSize: 15, fontWeight: 500, color: "rgba(255, 255, 255, 0.5)", marginTop: 8, cursor: "pointer"}}>Create Account</a>
