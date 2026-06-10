@@ -177,7 +177,7 @@ export default function Sidebar({ activePath }: SidebarProps) {
           <div
             style={{
               fontSize: 14,
-              color: "rgba(255,255,255,0.78)",
+              color: "rgba(255,255,255,0.9)",
               letterSpacing: ".12em",
               textTransform: "uppercase",
               padding: "0 8px",
@@ -192,10 +192,9 @@ export default function Sidebar({ activePath }: SidebarProps) {
           const active = activePath === item.path
 
           return (
-            <div
+            <button
               key={item.label}
               onClick={() => navigate(item.path)}
-              role="menuitem"
               aria-current={active ? "page" : undefined}
               title={collapsed ? item.label : undefined}
               style={{
@@ -204,6 +203,9 @@ export default function Sidebar({ activePath }: SidebarProps) {
                 justifyContent: collapsed ? "center" : "flex-start",
                 gap: 10,
                 padding: "9px 10px",
+                width: "100%",
+                background: "transparent",
+                border: "none",
                 borderRadius: 6,
                 fontSize: 15,
                 fontWeight: 500,
@@ -230,7 +232,7 @@ export default function Sidebar({ activePath }: SidebarProps) {
               </span>
 
               {!collapsed && item.label}
-            </div>
+            </button>
           )
         })}
       </nav>
@@ -249,7 +251,7 @@ export default function Sidebar({ activePath }: SidebarProps) {
               style={{
                 padding: "8px 10px",
                 fontSize: 14,
-                color: "rgba(255,255,255,0.5)",
+                color: "rgba(255,255,255,0.8)",
               }}
             >
               Loading...
@@ -302,44 +304,46 @@ export default function Sidebar({ activePath }: SidebarProps) {
             </div>
 
             {!collapsed && (
-              <div
-                onClick={handleLogout}
+              <button onClick={handleLogout}
                 style={{
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   gap: 8,
                   padding: "8px 10px",
+                  width: "100%",
+                  background: "transparent",
+                  border: "none",
                   borderRadius: 6,
                   fontSize: 15,
                   fontWeight: 500,
-                  color: "rgba(249,248,255,0.87)",
+                  color: "rgba(249, 248, 255, 0.87)",
                   cursor: "pointer",
                   marginTop: 4,
-                }}
-              >
+                }}>
                 ↩ Log out
-              </div>
+              </button>
             )}
           </>
         ) : (
           !collapsed && (
-            <div
-              onClick={handleLogin}
+            <button onClick={handleLogin}
               style={{
                 display: "flex",
                 alignItems: "center",
                 gap: 8,
                 padding: "8px 10px",
+                width: "100%",
+                background: "transparent",
+                border: "none",
                 borderRadius: 6,
                 fontSize: 15,
                 fontWeight: 500,
-                color: "rgba(249,248,255,0.87)",
+                color: "rgba(249, 248, 255, 0.87)",
                 cursor: "pointer",
-              }}
-            >
+              }}>
               ↪ Log In
-            </div>
+            </button>
           )
         )}
       </div>

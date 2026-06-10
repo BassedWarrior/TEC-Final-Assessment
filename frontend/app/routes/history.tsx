@@ -1,7 +1,7 @@
 import { useState } from "react"
-import Sidebar from "../../src/components/Sidebar"
-import type { Batter, Pitcher } from "../../src/data/mockPlayers"
-import { MOCK_HISTORY } from "../../src/data/mockSimulations"
+import { PageLayout, TopBar, SummaryBar } from "../components/Layout"
+import type { Batter, Pitcher } from "../data/mockPlayers"
+import { MOCK_HISTORY } from "../data/mockSimulations"
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -143,22 +143,9 @@ export default function History() {
   }
 
   return (
-    <div style={{ display: "flex", height: "100vh", fontFamily: "'DM Sans', sans-serif", backgroundImage: "url(https://pix11.com/wp-content/uploads/sites/25/2026/05/APTOPIX_Yankees_Mets_Baseball_26137758631951.jpg?w=2560&h=1440&crop=1)" }}>
-      
-      <Sidebar activePath="/history"/>
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-
+    <PageLayout activePath="/history" backgroundImage="/images/bg-history.jpg">
         {/* Topbar */}
-        <div style={{ padding: "18px 24px", borderBottom: "0.5px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-          <div>
-            <div style={{ fontSize: 18, fontWeight: 600, color: "rgba(255, 255, 255, 0.68)", letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 3 }}>MLB · 2025</div>
-            <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 35, fontWeight: 700, color: "#f0ede6" }}>Simulation History</h1>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255, 255, 255, 0.32)", borderRadius: 6, padding: "7px 12px", fontSize: 16, color: "rgba(255, 255, 255, 0.88)" }}>
-            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#2ecc71" }} />
-            {MOCK_HISTORY.length} simulations
-          </div>
-        </div>
+        <TopBar title="Simulation History" />
 
         {/* Search */}
         <div style={{ padding: "12px 24px", borderBottom: "0.5px solid rgba(255,255,255,0.06)", flexShrink: 0 }}>
@@ -288,22 +275,12 @@ export default function History() {
         </div>
 
         {/* Summary bar */}
-        <div style={{ display: "flex", flexShrink: 0, background:"rgba(35, 36, 37, 0.57)" }}>
-          {[
-            [String(MOCK_HISTORY.length), "Total simulations"],
-            [String(MOCK_HISTORY.filter(r => r.away.score > r.home.score).length), "Away wins"],
-            [String(MOCK_HISTORY.filter(r => r.home.score > r.away.score).length), "Home wins"],
-            [String((MOCK_HISTORY.filter(r => r.home.score > r.away.score).length / MOCK_HISTORY.length * 100).toFixed(2)), "Home Win %"],
-          ].map(([val, lbl], i, arr) => (
-            <div key={lbl} style={{ flex: 1, padding: "13px 20px", borderRight: i < arr.length - 1 ? "0.5px solid rgba(255,255,255,0.06)" : "none" }}>
-              <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 30, fontWeight: 700, color: "#f0ede6" }}>{val}</div>
-              <div style={{ fontSize: 16, fontWeight:700, color: "rgba(255, 255, 255, 0.67)", textTransform: "uppercase", letterSpacing: ".07em" }}>{lbl}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" />
-    </div>
+        <SummaryBar items={[
+            { label: "Total simulations", value: String(MOCK_HISTORY.length) },
+            { label: "Away wins", value: String(MOCK_HISTORY.filter(r => r.away.score > r.home.score).length) },
+            { label: "Home wins", value: String(MOCK_HISTORY.filter(r => r.home.score > r.away.score).length) },
+            { label: "Home Win %", value: String((MOCK_HISTORY.filter(r => r.home.score > r.away.score).length / MOCK_HISTORY.length * 100).toFixed(2)) },
+        ]} />
+    </PageLayout>
   )
 }
