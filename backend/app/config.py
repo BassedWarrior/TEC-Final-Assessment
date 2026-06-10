@@ -21,5 +21,8 @@ class Settings:
         os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30")
     )
 
+    # Base URL of the MLB model API (Monte Carlo /simulate service)
+    MODEL_API_URL: str = os.getenv("MODEL_API_URL", "http://localhost:8001")
+
 
 settings = Settings()
