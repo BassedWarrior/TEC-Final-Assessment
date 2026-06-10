@@ -7,4 +7,5 @@ export default [
   route("statistics", "routes/player_stats.tsx"),
   route("register", "routes/register.tsx"),
   route("history", "routes/history.tsx"),
+  route("sandbox", "routes/sandbox.tsx")
 ] satisfies RouteConfig;
