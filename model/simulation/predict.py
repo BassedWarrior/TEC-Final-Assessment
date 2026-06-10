@@ -13,7 +13,7 @@ from model_sampler import (
 
 # Paths relative to the file (not the cwd): works even if the API invokes from another dir.
 _BASE_DIR = Path(__file__).resolve().parent.parent  # .../MODELO
-MODEL_PATH = _BASE_DIR / "models" / "pa_model.txt"
+MODEL_PATH = _BASE_DIR / "model_trainning" /"trained_models" / "pa_model.txt"
 FEATURE_NAMES_PATH = _BASE_DIR / "data" / "feature_names.csv"
 
 _FEATURE_NAMES: Optional[list] = None
