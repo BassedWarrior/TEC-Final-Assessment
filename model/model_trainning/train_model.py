@@ -7,7 +7,7 @@ from sklearn.metrics import log_loss, accuracy_score, confusion_matrix
 
 DATA_DIR = Path("../data")
 # Canonical models path (MODELO/models), read by predict.py and MonteCarlo.py.
-MODELS_DIR = Path("./models")
+MODELS_DIR = Path("./trained_models")
 MODELS_DIR.mkdir(exist_ok=True)
 
 
