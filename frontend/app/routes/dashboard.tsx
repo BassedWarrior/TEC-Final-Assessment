@@ -113,7 +113,14 @@ export default function Dashboard() {
                           </button>
                         </td>
                       </tr>
-                      {isExpanded && <Graph game={game} />}
+                        {isExpanded && (
+                          <Graph 
+                            game={game} 
+                            fullWidth={true}
+                            isEmbedded={true}
+                            backgroundColor="rgba(0,0,0,0.3)"
+                          />
+                        )}
                     </>
                   )
                 })}
