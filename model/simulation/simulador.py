@@ -3,7 +3,7 @@ import statistics
 from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Callable, Optional
-from GameState import GameState, Outcome
+from gamestate import GameState, Outcome
 
 LEAGUE_AVG_FREQUENCIES = {
     Outcome.STRIKEOUT: 0.226,
@@ -23,6 +23,8 @@ assert abs(_total - 1.0) < 0.001, f"Frecuencias deben sumar 1, suman {_total}"
 
 
 class LeagueAverageSampler:
+    """Outcome sampler that draws from fixed league-average frequencies."""
+
     def __init__(self, freqs: dict = None, seed: Optional[int] = None):
         self.freqs = freqs or LEAGUE_AVG_FREQUENCIES
         self.outcomes = list(self.freqs.keys())
@@ -30,16 +32,16 @@ class LeagueAverageSampler:
         self.rng = random.Random(seed)
 
     def __call__(self, state: GameState) -> Outcome:
-        # state se ignora en v1; mañana el modelo lo usará
+        # state is ignored in v1; later the model will use it
         return self.rng.choices(self.outcomes, weights=self.weights, k=1)[0]
 
 
 @dataclass
 class InningStats:
-    """Línea de un inning (un número de inning) con el aporte de cada equipo.
+    """Line for an inning (one inning number) with each team's contribution.
 
-    El equipo visitante (away) batea en el Top y el local (home) en el Bottom,
-    así que un mismo `inning_number` agrega ambos medios-innings.
+    The away team bats in the top half and the home team in the bottom half,
+    so a single `inning_number` aggregates both half-innings.
     """
 
     inning_number: int
@@ -55,16 +57,18 @@ class InningStats:
 
 @dataclass
 class GameResult:
+    """Final result of a simulated game with per-team totals and optional inning breakdown."""
+
     home_score: int
     away_score: int
     innings_played: int
     total_pas: int
     home_hits: int
     away_hits: int
-    home_strikeouts: int  # ← NUEVO
+    home_strikeouts: int  # ← NEW
     away_strikeouts: int
     went_to_extras: bool
-    # Desglose por inning (solo si play_game se llamó con track_innings=True).
+    # Per-inning breakdown (only if play_game was called with track_innings=True).
     innings: Optional[list] = None
 
     @property
@@ -82,20 +86,30 @@ HIT_OUTCOMES = {Outcome.SINGLE, Outcome.DOUBLE, Outcome.TRIPLE, Outcome.HOME_RUN
 def play_game(
     sampler: Callable[[GameState], Outcome],
     initial_state: Optional[GameState] = None,
-    max_pas: int = 1000,  # safety: evita loops infinitos por bugs
-    track_innings: bool = False,  # acumula el desglose por inning (más costoso)
+    max_pas: int = 1000,  # safety: avoids infinite loops caused by bugs
+    track_innings: bool = False,  # accumulate the per-inning breakdown (more costly)
 ) -> GameResult:
+    """Simulate a full game with `sampler` and return the GameResult.
 
+    Args:
+        sampler: callable mapping a GameState to a sampled Outcome.
+        initial_state: optional starting GameState (copied); defaults to a fresh game.
+        max_pas: safety cap on total plate appearances to guard against infinite loops.
+        track_innings: if True, also accumulate a per-inning breakdown (more costly).
+
+    Returns:
+        GameResult with the final score and aggregate stats.
+    """
     state = initial_state.copy() if initial_state else GameState()
     total_pas = 0
     home_hits = 0
     away_hits = 0
-    home_strikeouts = 0  # ← NUEVO
+    home_strikeouts = 0  # ← NEW
     away_strikeouts = 0
     last_pa_inning = 1
 
-    # Acumuladores por inning: {inning_number: {home_runs, away_runs, ...}}.
-    # Solo se llenan si track_innings; si no, el overhead es nulo.
+    # Per-inning accumulators: {inning_number: {home_runs, away_runs, ...}}.
+    # Only filled if track_innings; otherwise the overhead is zero.
     inning_acc = (
         defaultdict(
             lambda: {
@@ -164,8 +178,8 @@ def play_game(
         total_pas=total_pas,
         home_hits=home_hits,
         away_hits=away_hits,
-        # Fue a extras si se jugó al menos un PA en el inning 10 o posterior
-        home_strikeouts=home_strikeouts,  # ← NUEVO
+        # Went to extras if at least one PA was played in the 10th inning or later
+        home_strikeouts=home_strikeouts,  # ← NEW
         away_strikeouts=away_strikeouts,
         went_to_extras=last_pa_inning > 9,
         innings=innings,
@@ -173,19 +187,19 @@ def play_game(
 
 
 MLB_BENCHMARKS = {
-    "runs_per_team_per_game": 4.39,  # media de carreras por equipo
-    "runs_std": 3.10,  # desviación estándar
-    "hits_per_team_per_game": 8.18,  # hits promedio por equipo
-    "pas_per_game": 76.5,  # PAs totales del juego (ambos equipos)
-    "pct_extras": 0.087,  # ~8.7% de juegos a extras
-    "home_win_pct": 0.540,  # ventaja del local (sin contexto = sampler simétrico = ~50%)
+    "runs_per_team_per_game": 4.39,  # mean runs per team
+    "runs_std": 3.10,  # standard deviation
+    "hits_per_team_per_game": 8.18,  # average hits per team
+    "pas_per_game": 76.5,  # total PAs in the game (both teams)
+    "pct_extras": 0.087,  # ~8.7% of games go to extras
+    "home_win_pct": 0.540,  # home-field advantage (no context = symmetric sampler = ~50%)
 }
 
 
 def simulate_many(n_games: int = 10_000, seed: int = 42) -> dict:
     """
-    Simula n_games juegos con el sampler de liga promedio y reporta estadísticas
-    agregadas para comparar contra MLB real.
+    Simulate n_games games with the league-average sampler and report aggregate
+    statistics to compare against real MLB.
     """
     sampler = LeagueAverageSampler(seed=seed)
     results = [play_game(sampler) for _ in range(n_games)]
@@ -219,8 +233,8 @@ def simulate_many(n_games: int = 10_000, seed: int = 42) -> dict:
 
 def print_game_results(results: list[GameResult], max_rows: int = 20) -> None:
     """
-    Imprime una tabla con los resultados de los primeros `max_rows` juegos:
-    score final y strikeouts por equipo.
+    Print a table with the results of the first `max_rows` games:
+    final score and strikeouts per team.
     """
     print("\n" + "=" * 60)
     print(f"  RESULTADOS ({min(len(results), max_rows)} de {len(results)} juegos)")
@@ -242,8 +256,8 @@ if __name__ == "__main__":
     sampler = LeagueAverageSampler(seed=42)
     results = [play_game(sampler) for _ in range(10_000)]
 
-    # Imprimimos los primeros 20 con detalle
+    # Print the first 20 in detail
     print_game_results(results, max_rows=20)
 
-    # Calculamos los aggregates
+    # Compute the aggregates
     stats = simulate_many(n_games=10_000)

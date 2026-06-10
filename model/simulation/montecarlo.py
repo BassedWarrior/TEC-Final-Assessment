@@ -1,8 +1,8 @@
 import os
 
-# Paralelizamos por juego (multiprocessing); cada worker debe usar UN solo hilo.
-# Si no, LightGBM lanza varios hilos OMP por proceso y, con N workers, sobre-
-# suscribe los cores y colapsa el throughput. Debe ir antes de importar numpy/lgb.
+# We parallelize per game (multiprocessing); each worker must use a SINGLE thread.
+# Otherwise, LightGBM spawns several OMP threads per process and, with N workers,
+# oversubscribes the cores and collapses throughput. Must run before importing numpy/lgb.
 os.environ.setdefault("OMP_NUM_THREADS", "1")
 os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
 os.environ.setdefault("MKL_NUM_THREADS", "1")
@@ -16,13 +16,13 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from GameState import GameState
-from Simulador import play_game
-import mlb_stats  # stats OFICIALES de MLB (misma fuente que build_features.py)
+from gamestate import GameState
+from simulador import play_game
+import mlb_stats  # OFFICIAL MLB stats (same source as build_features.py)
 
 import importlib.util
 
-# Rutas ancladas al archivo (no al cwd): funciona desde cualquier directorio.
+# Paths anchored to the file (not the cwd): works from any directory.
 _SIM_DIR = Path(__file__).resolve().parent  # .../MODELO/Simulation
 _BASE_DIR = _SIM_DIR.parent  # .../MODELO
 spec = importlib.util.spec_from_file_location(
@@ -43,10 +43,10 @@ DATA_DIR = _BASE_DIR / "data"
 MODELS_DIR = _BASE_DIR / "models"
 BOXSCORE_CACHE_DIR = DATA_DIR / "boxscore_cache"
 
-# --- Fuente de perfiles de jugador: stats OFICIALES de MLB ------------------
-# DEBE coincidir con build_features.py (misma temporada fuente, mismos
-# thresholds y misma imputación) para que la simulación reciba features de la
-# misma distribución con la que se entrenó el modelo (sin train/serve skew).
+# --- Player profile source: OFFICIAL MLB stats ------------------------------
+# MUST match build_features.py (same source season, same thresholds and same
+# imputation) so the simulation receives features from the same distribution
+# the model was trained on (no train/serve skew).
 SOURCE_SEASON = 2024
 MIN_PA_BATTER = 100
 MIN_PA_PITCHER = 50
@@ -65,17 +65,17 @@ N_SIMS_PER_GAME = 1000
 N_GAMES_TO_VALIDATE = None
 SEED = 42
 
-# Inning en que entra el primer relevista (cambio de pitcher del abridor al bullpen).
+# Inning at which the first reliever enters (pitcher change from starter to bullpen).
 RELIEVER_ENTRY_INNING = 6
 
 
 def build_bullpen_map(cache_dir: Path = BOXSCORE_CACHE_DIR) -> dict:
     """
-    Lee los boxscores cacheados y devuelve, por game_pk, los relevistas reales
-    de cada equipo (los pitchers que aparecen DESPUÉS del abridor, en orden de
-    aparición).
+    Read the cached boxscores and return, per game_pk, the real relievers of
+    each team (the pitchers appearing AFTER the starting pitcher, in order of
+    appearance).
 
-    Estructura: {game_pk: {"home": [id, ...], "away": [id, ...]}}
+    Structure: {game_pk: {"home": [id, ...], "away": [id, ...]}}
     """
     bullpens = {}
     if not cache_dir.exists():
@@ -86,19 +86,19 @@ def build_bullpen_map(cache_dir: Path = BOXSCORE_CACHE_DIR) -> dict:
         try:
             data = json.loads(fpath.read_text())
             teams = data["teams"]
-            # pitchers[0] es el abridor (coincide con lineups.parquet); el resto, bullpen
+            # pitchers[0] is the starting pitcher (matches lineups.parquet); the rest, bullpen
             bullpens[int(fpath.stem)] = {
                 "home": list(teams["home"]["pitchers"][1:]),
                 "away": list(teams["away"]["pitchers"][1:]),
             }
         except (KeyError, ValueError, json.JSONDecodeError):
-            continue  # boxscore incompleto o corrupto: ese juego va sin bullpen
+            continue  # incomplete or corrupt boxscore: that game runs without a bullpen
 
     return bullpens
 
 
 def _impute_official(metrics: dict, min_pa: int) -> dict:
-    """pa < min_pa -> stats a liga promedio (conserva pa_count). Igual que build_features.py."""
+    """pa < min_pa -> stats set to league average (keeps pa_count). Same as build_features.py."""
     if metrics["pa_count"] < min_pa:
         return {
             "pa_count": metrics["pa_count"],
@@ -109,17 +109,17 @@ def _impute_official(metrics: dict, min_pa: int) -> dict:
 
 def build_official_profiles(season: int) -> tuple[dict, dict]:
     """
-    {id: BatterProfile} y {id: PitcherProfile} desde las stats OFICIALES de MLB
-    (mlb_stats), con el MISMO threshold/imputación que build_features.py. Así los
-    perfiles que alimentan la simulación coinciden con las features de entrenamiento.
+    {id: BatterProfile} and {id: PitcherProfile} from the OFFICIAL MLB stats
+    (mlb_stats), with the SAME threshold/imputation as build_features.py. This
+    way the profiles that feed the simulation match the training features.
 
-    Los jugadores AUSENTES en la temporada fuente (rookies) no entran aquí: los
-    resuelve build_lineup_from_ids con promedio de liga (is_rookie/is_new=True).
+    Players ABSENT in the source season (rookies) are not included here: they
+    are resolved by build_lineup_from_ids using the league average (is_rookie/is_new=True).
     """
     stats = mlb_stats.season_stats(season)
     batters_raw, pitchers_raw = stats["batters"], stats["pitchers"]
 
-    # Lateralidad oficial (people API, cacheada) para todos los IDs con stats.
+    # Official handedness (people API, cached) for all IDs with stats.
     hand = mlb_stats._handedness(list(batters_raw) + list(pitchers_raw))
 
     batter_profiles = {}
@@ -160,6 +160,7 @@ def build_official_profiles(season: int) -> tuple[dict, dict]:
 
 
 def load_artifacts():
+    """Load the model, feature names, player profiles, lineups, bullpens and actual game results."""
     print("Cargando artefactos...")
     model_path = MODELS_DIR / "pa_model.txt"
     feature_names = pd.read_csv(DATA_DIR / "feature_names.csv", header=None)[0].tolist()
@@ -214,7 +215,7 @@ def monte_carlo_wp(
     sampler: ModelSampler,
     n_sims: int,
 ) -> tuple[float, int, int]:
-
+    """Run n_sims simulated games from initial_state and return (win probability, home wins, valid sims)."""
     home_wins = 0
     valid_sims = 0
     for _ in range(n_sims):
@@ -224,22 +225,23 @@ def monte_carlo_wp(
                 home_wins += 1
             valid_sims += 1
         except RuntimeError:
-            # Juego excedió max_pas (raro pero puede pasar)
+            # Game exceeded max_pas (rare but possible)
             continue
 
     wp = home_wins / valid_sims if valid_sims > 0 else 0.5
     return wp, home_wins, valid_sims
 
 
-# --- Worker paralelo: cada juego es independiente; se reparten en los cores. ---
-# Misma simulación que el loop serial, solo cambia que corre en paralelo y con
-# 1 hilo por proceso. No altera la lógica de outcomes ni los perfiles.
+# --- Parallel worker: each game is independent; they are distributed across the cores. ---
+# Same simulation as the serial loop, the only difference is that it runs in parallel and with
+# 1 thread per process. It does not alter the outcome logic nor the profiles.
 _W = {}
 
 
 def _init_worker(
     model_path, feature_names, batter_profiles, pitcher_profiles, n_sims, bullpen_map
 ):
+    """Initialize per-worker globals (model, features, profiles, n_sims, bullpens) for the pool."""
     os.environ["OMP_NUM_THREADS"] = "1"
     _W["model_path"] = model_path
     _W["fn"] = feature_names
@@ -250,6 +252,7 @@ def _init_worker(
 
 
 def _sim_game(game: dict):
+    """Build both lineups for one game and return its Monte Carlo win-probability record (or None if the lineup is incomplete)."""
     bullpen = _W["bm"].get(int(game["game_pk"]), {})
     try:
         home_lineup = build_lineup_from_ids(
@@ -271,14 +274,14 @@ def _sim_game(game: dict):
             reliever_entry_inning=RELIEVER_ENTRY_INNING,
         )
     except ValueError:
-        return None  # lineup incompleto
+        return None  # incomplete lineup
 
     sampler = ModelSampler(
         model_path=_W["model_path"],
         feature_names=_W["fn"],
         home_lineup=home_lineup,
         away_lineup=away_lineup,
-        seed=SEED + int(game["game_pk"]),  # seed único por juego
+        seed=SEED + int(game["game_pk"]),  # unique seed per game
     )
     wp, _, valid_sims = monte_carlo_wp(GameState(), sampler, _W["ns"])
     return {
@@ -304,7 +307,7 @@ def validate_against_test(
     max_games: int = None,
     n_workers: int = None,
 ) -> pd.DataFrame:
-
+    """Run the Monte Carlo win-probability simulation for every game in parallel and return a DataFrame of predictions vs. actual results."""
     games = lineups.merge(results, on="game_pk", how="inner")
     if max_games:
         games = games.head(max_games)
@@ -336,7 +339,7 @@ def validate_against_test(
 
 
 def evaluate_predictions(predictions: pd.DataFrame) -> dict:
-    """Calcula accuracy, log loss, Brier score y baselines."""
+    """Compute accuracy, log loss, Brier score and baselines."""
     y_true = predictions["home_won"].values
     p_home = predictions["wp_home"].values
 
@@ -372,6 +375,7 @@ def evaluate_predictions(predictions: pd.DataFrame) -> dict:
 
 
 def print_evaluation_report(metrics: dict, predictions: pd.DataFrame):
+    """Print the validation report: model metrics vs. baselines, interpretation and calibration by prediction bucket."""
     print("\n" + "=" * 70)
     print("RESULTADOS DE VALIDACIÓN")
     print("=" * 70)
@@ -396,7 +400,7 @@ def print_evaluation_report(metrics: dict, predictions: pd.DataFrame):
     )
     print(f"{'Log loss':<25} {metrics['model_log_loss']:>12.4f}")
 
-    # Mejora sobre baselines
+    # Improvement over baselines
     print("\n" + "-" * 70)
     print("INTERPRETACIÓN")
     print("-" * 70)
@@ -413,7 +417,7 @@ def print_evaluation_report(metrics: dict, predictions: pd.DataFrame):
     print(f"    Modelos públicos buenos:        57-60% accuracy")
     print(f"    Techo teórico (beisbol):        ~63%")
 
-    # Distribución de predicciones
+    # Prediction distribution
     print("\n" + "-" * 70)
     print("CALIBRACIÓN POR BUCKET DE PREDICCIÓN")
     print("-" * 70)
@@ -441,7 +445,7 @@ if __name__ == "__main__":
     print(f"  Seed: {SEED}")
     print("=" * 70)
 
-    # Cargar todo
+    # Load everything
     (
         model_path,
         feature_names,
@@ -452,7 +456,7 @@ if __name__ == "__main__":
         bullpen_map,
     ) = load_artifacts()
 
-    # Validar
+    # Validate
     predictions = validate_against_test(
         model_path=model_path,
         feature_names=feature_names,
@@ -465,11 +469,11 @@ if __name__ == "__main__":
         max_games=N_GAMES_TO_VALIDATE,
     )
 
-    # Guardar predicciones
+    # Save predictions
     out_path = MODELS_DIR / "wp_predictions.parquet"
     predictions.to_parquet(out_path, compression="snappy", index=False)
     print(f"\n  ✓ Predicciones guardadas: {out_path.name}")
 
-    # Evaluar
+    # Evaluate
     metrics = evaluate_predictions(predictions)
     print_evaluation_report(metrics, predictions)

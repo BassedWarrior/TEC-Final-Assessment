@@ -6,13 +6,13 @@ import numpy as np
 import pandas as pd
 import lightgbm as lgb
 
-from GameState import GameState, Outcome
+from gamestate import GameState, Outcome
 
 
 DATA_DIR = Path("./data")
 MODELS_DIR = Path("./models")
 
-# Orden de las clases (debe matchear el modelo entrenado)
+# Class order (must match the trained model)
 OUTCOME_ORDER = ["K", "BB", "HBP", "1B", "2B", "3B", "HR", "OUT", "DP", "SF"]
 OUTCOME_FROM_INDEX = {
     0: Outcome.STRIKEOUT,
@@ -40,10 +40,10 @@ LEAGUE_AVG = {
 
 @dataclass
 class BatterProfile:
-    """Stats de un bateador (las features que espera el modelo)."""
+    """Batter stats (the features the model expects)."""
 
     batter_id: int
-    stand: str  # "L", "R", o "S"
+    stand: str  # "L", "R", or "S"
     pa_count: float
     avg: float
     obp: float
@@ -57,10 +57,10 @@ class BatterProfile:
 
 @dataclass
 class PitcherProfile:
-    """Stats de un pitcher (las features que espera el modelo)."""
+    """Pitcher stats (the features the model expects)."""
 
     pitcher_id: int
-    throws: str  # "L" o "R"
+    throws: str  # "L" or "R"
     pa_count: float
     avg: float
     obp: float
@@ -74,27 +74,30 @@ class PitcherProfile:
 
 @dataclass
 class TeamLineup:
+    """Lineup for one team: 9 batters, a starting pitcher and a bullpen."""
+
     team_name: str
-    batters: list[BatterProfile]  # exactamente 9
-    pitcher: PitcherProfile  # abridor
-    bullpen: list[PitcherProfile] = field(default_factory=list)  # relevistas
-    reliever_entry_inning: int = 6  # inning en que entra el primer relevista
+    batters: list[BatterProfile]  # exactly 9
+    pitcher: PitcherProfile  # starting pitcher
+    bullpen: list[PitcherProfile] = field(default_factory=list)  # relievers
+    reliever_entry_inning: int = 6  # inning the first reliever enters
 
     def __post_init__(self):
         if len(self.batters) != 9:
             raise ValueError(f"Lineup necesita 9 bateadores, tiene {len(self.batters)}")
 
     def batter_at(self, idx: int) -> BatterProfile:
+        """Return the batter at the given lineup index."""
         return self.batters[idx]
 
     def pitcher_for_inning(self, inning: int) -> PitcherProfile:
         """
-        Devuelve el pitcher activo para el inning dado.
+        Return the active pitcher for the given inning.
 
-        El abridor lanza hasta `reliever_entry_inning - 1`. A partir de ese
-        inning entra el bullpen: el primer relevista en el inning de entrada,
-        el siguiente un inning después, etc. Si solo hay un relevista, este
-        cubre todos los innings restantes.
+        The starting pitcher throws through `reliever_entry_inning - 1`. From
+        that inning on the bullpen takes over: the first reliever at the entry
+        inning, the next one an inning later, and so on. If there is only one
+        reliever, it covers all remaining innings.
         """
         if not self.bullpen or inning < self.reliever_entry_inning:
             return self.pitcher
@@ -103,8 +106,17 @@ class TeamLineup:
 
 
 def build_player_profiles(pa_2024: pd.DataFrame) -> tuple[dict, dict]:
+    """Build batter and pitcher profiles from a DataFrame of plate appearances.
 
-    # Bateadores
+    Args:
+        pa_2024: One row per plate appearance with outcome and player columns.
+
+    Returns:
+        A tuple (batter_profiles, pitcher_profiles), each a dict mapping
+        player id to its aggregated BatterProfile / PitcherProfile.
+    """
+
+    # Batters
     df = pa_2024.copy()
     df["is_hit"] = df["pa_outcome"].isin(["1B", "2B", "3B", "HR"]).astype(int)
     df["is_K"] = (df["pa_outcome"] == "K").astype(int)
@@ -124,7 +136,7 @@ def build_player_profiles(pa_2024: pd.DataFrame) -> tuple[dict, dict]:
         at_bats = max(pa_count - group["is_BB"].sum() - group["is_HBP"].sum(), 1)
         hits = group["is_hit"].sum()
 
-        # Mano: tomamos el modo (la mano más común con la que bateó)
+        # Handedness: take the mode (the most common stand the player batted with)
         stand = (
             group["stand"].mode().iloc[0] if not group["stand"].mode().empty else "R"
         )
@@ -143,7 +155,7 @@ def build_player_profiles(pa_2024: pd.DataFrame) -> tuple[dict, dict]:
             is_rookie=False,
         )
 
-    # Pitchers (misma lógica, agrupado por pitcher)
+    # Pitchers (same logic, grouped by pitcher)
     pitcher_profiles = {}
     for pitcher_id, group in df.groupby("pitcher"):
         pa_count = len(group)
@@ -174,7 +186,7 @@ def build_player_profiles(pa_2024: pd.DataFrame) -> tuple[dict, dict]:
 
 
 def make_league_avg_batter(batter_id: int = -1, stand: str = "R") -> BatterProfile:
-    """Bateador 'promedio de liga' para rookies."""
+    """'League average' batter used for rookies."""
     return BatterProfile(
         batter_id=batter_id,
         stand=stand,
@@ -191,7 +203,7 @@ def make_league_avg_batter(batter_id: int = -1, stand: str = "R") -> BatterProfi
 
 
 def make_league_avg_pitcher(pitcher_id: int = -1, throws: str = "R") -> PitcherProfile:
-    """Pitcher 'promedio de liga' para nuevos."""
+    """'League average' pitcher used for new pitchers."""
     return PitcherProfile(
         pitcher_id=pitcher_id,
         throws=throws,
@@ -211,7 +223,7 @@ _BOOSTER_CACHE: dict[str, lgb.Booster] = {}
 
 
 def load_booster(model_path) -> lgb.Booster:
-    """Carga (y memoiza) el Booster por ruta."""
+    """Load (and memoize) the Booster by path."""
     key = str(model_path)
     if key not in _BOOSTER_CACHE:
         _BOOSTER_CACHE[key] = lgb.Booster(model_file=key)
@@ -219,6 +231,8 @@ def load_booster(model_path) -> lgb.Booster:
 
 
 class ModelSampler:
+    """Samples a plate-appearance outcome from the trained model given a GameState."""
+
     def __init__(
         self,
         model_path: Path,
@@ -238,13 +252,13 @@ class ModelSampler:
 
     def _build_feature_vector(self, state: GameState) -> np.ndarray:
 
-        # Identificar quién batea y quién pitcha
+        # Identify who is batting and who is pitching
         if state.is_top:
-            # Top inning: batea el visitante, pitcha el local
+            # Top half: the away team bats, the home team pitches
             batter = self.away_lineup.batter_at(state.away_batter_idx)
             pitcher = self.home_lineup.pitcher_for_inning(state.inning)
         else:
-            # Bottom inning: batea el local, pitcha el visitante
+            # Bottom half: the home team bats, the away team pitches
             batter = self.home_lineup.batter_at(state.home_batter_idx)
             pitcher = self.away_lineup.pitcher_for_inning(state.inning)
 
@@ -252,9 +266,9 @@ class ModelSampler:
         on1b, on2b, on3b = state.bases
         bases_state = int(on1b) + int(on2b) * 2 + int(on3b) * 4
 
-        # Score diff (desde la perspectiva del bateador)
+        # Score diff (from the batter's perspective)
         if state.is_top:
-            # Bateador = away
+            # Batter = away
             score_diff = state.away_score - state.home_score
         else:
             score_diff = state.home_score - state.away_score
@@ -265,10 +279,10 @@ class ModelSampler:
             or (batter.stand == "L" and pitcher.throws == "L")
         )
 
-        # --- Diccionario de todas las features ---
-        # ¡El nombre de cada feature debe matchear feature_names.csv!
+        # --- Dictionary of all the features ---
+        # Each feature name must match feature_names.csv!
         features = {
-            # Manos
+            # Handedness
             "p_throws_R": int(pitcher.throws == "R"),
             "stand_R": int(batter.stand == "R"),
             "stand_S": int(batter.stand == "S"),
@@ -279,7 +293,7 @@ class ModelSampler:
             "outs_when_up": state.outs,
             "bases_state": bases_state,
             "score_diff": score_diff,
-            # Bateador
+            # Batter stats
             "b_pa_count": batter.pa_count,
             "b_avg": batter.avg,
             "b_obp": batter.obp,
@@ -289,7 +303,7 @@ class ModelSampler:
             "b_bb_rate": batter.bb_rate,
             "b_hr_rate": batter.hr_rate,
             "b_is_rookie": int(batter.is_rookie),
-            # Pitcher
+            # Pitcher stats
             "p_pa_count": pitcher.pa_count,
             "p_avg": pitcher.avg,
             "p_obp": pitcher.obp,
@@ -301,22 +315,22 @@ class ModelSampler:
             "p_is_new": int(pitcher.is_new),
         }
 
-        # Construir vector en el orden correcto (el orden de feature_names)
+        # Build the vector in the correct order (the order of feature_names)
         vec = np.array(
             [features[name] for name in self.feature_names], dtype=np.float64
         )
-        return vec.reshape(1, -1)  # 2D para LightGBM
+        return vec.reshape(1, -1)  # 2D for LightGBM
 
     def __call__(self, state: GameState) -> Outcome:
         """
-        Predice la distribución sobre outcomes y samplea uno.
-        Esta es la interfaz que play_game llama en cada PA.
+        Predict the distribution over outcomes and sample one.
+        This is the interface that play_game calls on every PA.
         """
         x = self._build_feature_vector(state)
-        # predict() de LightGBM en multiclase devuelve (n_samples, n_classes)
-        probs = self.model.predict(x)[0]  # vector de 8 probabilidades
+        # LightGBM's predict() in multiclass returns (n_samples, n_classes)
+        probs = self.model.predict(x)[0]  # vector of 8 probabilities
 
-        # Muestreo según la distribución predicha
+        # Sample according to the predicted distribution
         outcome_idx = self.rng.choice(len(probs), p=probs)
         return OUTCOME_FROM_INDEX[outcome_idx]
 
@@ -331,10 +345,10 @@ def build_lineup_from_ids(
     reliever_entry_inning: int = 6,
 ) -> TeamLineup:
     """
-    Construye un TeamLineup buscando los profiles por ID.
-    Si algún ID no existe en los profiles (rookie), usa promedio de liga.
+    Build a TeamLineup by looking up the profiles by ID.
+    If some ID is not present in the profiles (rookie), use the league average.
 
-    `bullpen_ids` son los relevistas que entran a partir de
+    `bullpen_ids` are the relievers that enter starting from
     `reliever_entry_inning` (default: inning 6).
     """
     if len(batter_ids) != 9:
@@ -393,7 +407,7 @@ PITCHER_STAT_FIELDS = [
 
 
 def _array_to_dict(arr, fields: list) -> dict:
-    """Convierte un array posicional (o dict) en {campo: valor}."""
+    """Convert a positional array (or dict) into {field: value}."""
     if isinstance(arr, dict):
         return arr
     if len(arr) != len(fields):
@@ -405,7 +419,7 @@ def _array_to_dict(arr, fields: list) -> dict:
 
 
 def batter_profile_from_array(arr, batter_id: int = -1) -> BatterProfile:
-    """Construye un BatterProfile desde un array de stats (o dict)."""
+    """Build a BatterProfile from a stats array (or dict)."""
     d = _array_to_dict(arr, BATTER_STAT_FIELDS)
     return BatterProfile(
         batter_id=batter_id,
@@ -423,7 +437,7 @@ def batter_profile_from_array(arr, batter_id: int = -1) -> BatterProfile:
 
 
 def pitcher_profile_from_array(arr, pitcher_id: int = -1) -> PitcherProfile:
-    """Construye un PitcherProfile desde un array de stats (o dict)."""
+    """Build a PitcherProfile from a stats array (or dict)."""
     d = _array_to_dict(arr, PITCHER_STAT_FIELDS)
     return PitcherProfile(
         pitcher_id=pitcher_id,
@@ -448,9 +462,9 @@ def build_lineup_from_stats(
     reliever_entry_inning: int = 6,
 ) -> TeamLineup:
     """
-    Construye un TeamLineup directamente desde arrays de stats (sin IDs).
-    `batter_arrays`: lista de 9 arrays. `pitcher_array`: array del abridor.
-    `bullpen_arrays`: arrays de relevistas (opcional).
+    Build a TeamLineup directly from stats arrays (without IDs).
+    `batter_arrays`: list of 9 arrays. `pitcher_array`: starting pitcher array.
+    `bullpen_arrays`: reliever arrays (optional).
     """
     if len(batter_arrays) != 9:
         raise ValueError(f"Necesito 9 bateadores, recibí {len(batter_arrays)}")

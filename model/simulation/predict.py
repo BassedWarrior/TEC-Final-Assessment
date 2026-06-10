@@ -3,15 +3,15 @@ from typing import Optional
 
 import pandas as pd
 
-from GameState import GameState
-from Simulador import play_game
-from Model_sampler import (
+from gamestate import GameState
+from simulador import play_game
+from model_sampler import (
     ModelSampler,
     build_lineup_from_stats,
     load_booster,
 )
 
-# Rutas relativas al archivo (no al cwd): funciona aunque el API invoque desde otro dir.
+# Paths relative to the file (not the cwd): works even if the API invokes from another dir.
 _BASE_DIR = Path(__file__).resolve().parent.parent  # .../MODELO
 MODEL_PATH = _BASE_DIR / "models" / "pa_model.txt"
 FEATURE_NAMES_PATH = _BASE_DIR / "data" / "feature_names.csv"
@@ -20,7 +20,7 @@ _FEATURE_NAMES: Optional[list] = None
 
 
 def _feature_names() -> list:
-    """Lee feature_names.csv una sola vez."""
+    """Read feature_names.csv only once."""
     global _FEATURE_NAMES
     if _FEATURE_NAMES is None:
         _FEATURE_NAMES = pd.read_csv(FEATURE_NAMES_PATH, header=None)[0].tolist()
@@ -28,7 +28,7 @@ def _feature_names() -> list:
 
 
 def _monte_carlo_wp(sampler: ModelSampler, n_sims: int) -> tuple:
-    """Simula n_sims juegos completos desde el inicio y cuenta victorias del local."""
+    """Simulate n_sims full games from the start and count the home team's wins."""
     home_wins = 0
     valid_sims = 0
     for _ in range(n_sims):
@@ -38,7 +38,7 @@ def _monte_carlo_wp(sampler: ModelSampler, n_sims: int) -> tuple:
                 home_wins += 1
             valid_sims += 1
         except RuntimeError:
-            continue  # juego excedió max_pas (raro)
+            continue  # game exceeded max_pas (rare)
     wp = home_wins / valid_sims if valid_sims > 0 else 0.5
     return wp, home_wins, valid_sims
 
@@ -57,13 +57,13 @@ def win_probability_from_stats(
     away_team: str = "AWAY",
 ) -> dict:
     """
-    Calcula la win probability del local simulando el juego n_sims veces.
+    Compute the home team's win probability by simulating the game n_sims times.
 
-    home_batters / away_batters: lista de 9 arrays de stats de bateador.
-    home_pitcher / away_pitcher: array de stats del abridor.
-    *_bullpen: listas opcionales de arrays de relevistas.
+    home_batters / away_batters: list of 9 batter stats arrays.
+    home_pitcher / away_pitcher: starting pitcher stats array.
+    *_bullpen: optional lists of reliever arrays.
     """
-    booster = load_booster(MODEL_PATH)  # cargado una sola vez (cacheado)
+    booster = load_booster(MODEL_PATH)  # loaded only once (cached)
     feature_names = _feature_names()
 
     home_lineup = build_lineup_from_stats(
@@ -82,7 +82,7 @@ def win_probability_from_stats(
     )
 
     sampler = ModelSampler(
-        model_path=booster,  # Booster ya cargado
+        model_path=booster,  # Booster already loaded
         feature_names=feature_names,
         home_lineup=home_lineup,
         away_lineup=away_lineup,
@@ -115,21 +115,21 @@ def simulate_match_from_stats(
     match_id: int = 1,
 ) -> dict:
     """
-    Igual que win_probability_from_stats, pero además del win-prob devuelve el
-    desglose inning-por-inning de cada simulación, listo para persistir en el
-    modelo relacional Match / Simulation / Inning.
+    Same as win_probability_from_stats, but in addition to the win prob it
+    returns the inning-by-inning breakdown of each simulation, ready to persist
+    in the relational Match / Simulation / Inning model.
 
-    Estructura devuelta (IDs enteros, claves foráneas resueltas):
+    Returned structure (integer IDs, foreign keys resolved):
         {
           "match":       {id, home_wp, away_wp, total_sims},
-          "simulations": [{id, match_id}, ...],          # una por sim válida
+          "simulations": [{id, match_id}, ...],          # one per valid sim
           "innings":     [{id, simulation_id, inning_number,
                            home_strikeouts, away_strikeouts,
                            home_hits, away_hits, home_runs, away_runs,
                            home_hr, away_hr}, ...],
         }
 
-    STKO = strikeouts (ponches).
+    STKO = strikeouts.
     """
     booster = load_booster(MODEL_PATH)
     feature_names = _feature_names()
@@ -168,7 +168,7 @@ def simulate_match_from_stats(
         try:
             result = play_game(sampler, initial_state=GameState(), track_innings=True)
         except RuntimeError:
-            continue  # juego excedió max_pas (raro)
+            continue  # game exceeded max_pas (rare)
 
         valid_sims += 1
         sim_id += 1
@@ -211,13 +211,13 @@ def simulate_match_from_stats(
 
 def to_nested(out: dict) -> dict:
     """
-    Convierte la salida plana (relacional) de simulate_match_from_stats al formato
-    ANIDADO Match -> Simulations -> sim_N -> inning_M -> stats.
+    Convert the flat (relational) output of simulate_match_from_stats into the
+    NESTED format Match -> Simulations -> sim_N -> inning_M -> stats.
 
-    Útil para consumirlo como JSON directo (app/frontend). Para BD usa la forma
-    plana original (mapea 1:1 a las tablas Match/Simulation/Inning).
+    Useful for consuming it as direct JSON (app/frontend). For the DB use the
+    original flat form (maps 1:1 to the Match/Simulation/Inning tables).
     """
-    # innings agrupados por simulación
+    # innings grouped by simulation
     innings_by_sim: dict = {}
     for inn in out["innings"]:
         innings_by_sim.setdefault(inn["simulation_id"], []).append(inn)
@@ -249,8 +249,8 @@ def to_nested(out: dict) -> dict:
 
 
 if __name__ == "__main__":
-    # Demo: lineup élite (home) vs lineup débil (away).
-    # Array: [mano, pa_count, avg, obp, slg, iso, k_rate, bb_rate, hr_rate, flag]
+    # Demo: elite lineup (home) vs weak lineup (away).
+    # Array: [stand, pa_count, avg, obp, slg, iso, k_rate, bb_rate, hr_rate, flag]
     elite_b = ["R", 600, 0.310, 0.420, 0.580, 0.270, 0.150, 0.130, 0.060, 0]
     weak_b = ["R", 300, 0.220, 0.280, 0.330, 0.110, 0.280, 0.060, 0.015, 0]
     elite_p = ["R", 700, 0.210, 0.270, 0.330, 0.120, 0.300, 0.060, 0.020, 0]
@@ -264,4 +264,4 @@ if __name__ == "__main__":
         n_sims=300,
         seed=42,
     )
-    print(out)  # wp_home esperado: alto (>0.7)
+    print(out)  # expected wp_home: high (>0.7)

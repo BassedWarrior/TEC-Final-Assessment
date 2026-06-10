@@ -1,5 +1,5 @@
-"""aqui buscamos relacionar las estadiscticas de cada bateador y pitcher para poder tener una aproximación
-real de que tan bien bate ciertos bateadores contra los pitchers"""
+"""Here we relate the stats of each batter and pitcher to get a realistic
+approximation of how well certain batters hit against pitchers."""
 
 import sys
 from pathlib import Path
@@ -7,14 +7,14 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-# Cliente compartido de stats oficiales de MLB (vive en Simulation/).
+# Shared client for official MLB stats (lives in Simulation/).
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "Simulation"))
 import mlb_stats
 
 DATA_DIR = Path("../data")
 
-# Temporada FUENTE de las stats de jugador. Debe ser ANTERIOR a las labels
-# (las labels son PAs de 2025) para no filtrar informacion del futuro.
+# SOURCE season for the player stats. Must be BEFORE the labels
+# (the labels are 2025 PAs) so we don't leak future information.
 SOURCE_SEASON = 2024
 
 MIN_PA_BATTER = 100
@@ -37,7 +37,7 @@ def apply_threshold_and_impute(
     prefix: str,
 ) -> pd.DataFrame:
     """
-    Para rookies o jugadores lesionados (con menos PA), normalizamos sus stats en el promedio de la liga
+    For rookies or injured players (with fewer PA), we normalize their stats to the league average.
     """
     out = stats[
         ["pa_count", "avg", "obp", "slg", "iso", "k_rate", "bb_rate", "hr_rate"]
@@ -47,11 +47,11 @@ def apply_threshold_and_impute(
     for col in ["avg", "obp", "slg", "iso", "k_rate", "bb_rate", "hr_rate"]:
         out.loc[low_pa_mask, col] = LEAGUE_AVG[col]
 
-    # Renombrar con prefijo
+    # Rename with prefix
     out = out.rename(columns={c: f"{prefix}{c}" for c in out.columns})
     return out
 
-    # Unimos las estaadisticas
+    # We join the stats
 
 
 def merge_features(
@@ -59,16 +59,16 @@ def merge_features(
     batter_stats: pd.DataFrame,
     pitcher_stats: pd.DataFrame,
 ) -> pd.DataFrame:
-
+    """Merge batter and pitcher features onto the 2025 PAs, flagging and imputing missing players."""
     df = pa_2025.copy()
 
-    # Merge bateadores
+    # Merge batters
     df = df.merge(batter_stats, how="left", left_on="batter", right_index=True)
 
-    # Marcar rookies (sin entry en 2024) ANTES de imputar
+    # Flag rookies (no entry in 2024) BEFORE imputing
     df["b_is_rookie"] = df["b_pa_count"].isna()
 
-    # Imputar stats faltantes con promedio de liga
+    # Impute missing stats with league average
     for col in [
         "b_avg",
         "b_obp",
@@ -78,7 +78,7 @@ def merge_features(
         "b_bb_rate",
         "b_hr_rate",
     ]:
-        key = col[2:]  # quitar 'b_'
+        key = col[2:]  # strip 'b_'
         df[col] = df[col].fillna(LEAGUE_AVG[key])
     df["b_pa_count"] = df["b_pa_count"].fillna(0)
 
@@ -107,7 +107,7 @@ def print_summary(
     pitcher_stats: pd.DataFrame,
     merged: pd.DataFrame,
 ) -> None:
-    """Imprime un resumen del feature engineering."""
+    """Print a summary of the feature engineering."""
     print("\n" + "=" * 60)
     print("RESUMEN")
     print("=" * 60)
@@ -124,7 +124,7 @@ def print_summary(
         f"PAs en 2025 con pitcher nuevo: {n_new_p:>6,} ({100 * n_new_p / len(merged):.1f}%)"
     )
 
-    # Top 10 bateadores por PAs en 2024
+    # Top 10 batters by PAs in 2024
     print("\nTop 10 bateadores por volumen en 2024:")
     top_b = batter_stats.nlargest(10, "pa_count")[
         ["pa_count", "avg", "obp", "slg", "k_rate"]
@@ -146,20 +146,20 @@ if __name__ == "__main__":
     print(f"Construyendo features (stats OFICIALES MLB {SOURCE_SEASON} → PAs 2025)")
     print("=" * 60)
 
-    # Cargar PAs target (las labels + el contexto del juego). Las stats de
-    # jugador YA NO se computan aqui: salen oficiales de MLB via mlb_stats.
+    # Load the target PAs (the labels + the game context). The player stats
+    # are NO LONGER computed here: they come official from MLB via mlb_stats.
     print("\nCargando PAs 2025 (target)...")
     pa_2025 = pd.read_parquet(DATA_DIR / "pa_2025.parquet")
     print(f"  pa_2025: {len(pa_2025):>7,} PAs")
 
-    # Stats oficiales de MLB de la temporada fuente (descarga cacheada).
+    # Official MLB stats from the source season (cached download).
     print(f"\nDescargando stats oficiales de MLB ({SOURCE_SEASON})...")
     batter_stats = mlb_stats.batter_frame(SOURCE_SEASON)
     pitcher_stats = mlb_stats.pitcher_frame(SOURCE_SEASON)
     print(f"  {len(batter_stats):,} bateadores con stats oficiales")
     print(f"  {len(pitcher_stats):,} pitchers con stats oficiales")
 
-    # Aplicar threshold e imputar bajos PA con liga promedio
+    # Apply threshold and impute low-PA players with league average
     print(
         f"\nAplicando threshold mínimo: bateadores={MIN_PA_BATTER}, pitchers={MIN_PA_PITCHER}"
     )
@@ -171,14 +171,14 @@ if __name__ == "__main__":
     batter_features = apply_threshold_and_impute(batter_stats, MIN_PA_BATTER, "b_")
     pitcher_features = apply_threshold_and_impute(pitcher_stats, MIN_PA_PITCHER, "p_")
 
-    # Unir features a los PAs de 2025
+    # Join features to the 2025 PAs
     print("\nUniendo features a PAs de 2025...")
     merged = merge_features(pa_2025, batter_features, pitcher_features)
 
-    # Reporte final
+    # Final report
     print_summary(pa_2025, batter_stats, pitcher_stats, merged)
 
-    # Guardar
+    # Save
     out_path = DATA_DIR / "pa_2025_with_features.parquet"
     merged.to_parquet(out_path, compression="snappy", index=False)
     size_mb = out_path.stat().st_size / 1e6

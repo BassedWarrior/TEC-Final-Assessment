@@ -5,17 +5,18 @@ import pandas as pd
 
 DATA_DIR = Path("../data")
 
-# Fechas de corte del split temporal
-TRAIN_END = "2025-07-31"  # train: hasta fin de julio
+# Cutoff dates for the temporal split
+TRAIN_END = "2025-07-31"  # train: through the end of July
 VAL_END = "2025-08-31"
 
 
 def encode_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Encode categorical columns, derive new features, and build the integer target."""
     df = df.copy()
 
-    # p_throws: L o R → 0 o 1
+    # p_throws: L or R → 0 or 1
     df["p_throws_R"] = (df["p_throws"] == "R").astype(int)
-    # stand: L, R o S (switch) → 3 columnas separadas
+    # stand: L, R or S (switch) → 3 separate columns
     df["stand_R"] = (df["stand"] == "R").astype(int)
     df["stand_S"] = (df["stand"] == "S").astype(int)
 
@@ -45,8 +46,9 @@ def encode_features(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def select_model_columns(df: pd.DataFrame) -> tuple[pd.DataFrame, list]:
+    """Select the model feature columns plus metadata, returning (subset_df, feature_cols)."""
     feature_cols = [
-        # Manos / matchup
+        # Hands / matchup
         "p_throws_R",
         "stand_R",
         "stand_S",
@@ -57,7 +59,7 @@ def select_model_columns(df: pd.DataFrame) -> tuple[pd.DataFrame, list]:
         "outs_when_up",
         "bases_state",
         "score_diff",
-        # Stats del bateador
+        # Batter stats
         "b_pa_count",
         "b_avg",
         "b_obp",
@@ -67,7 +69,7 @@ def select_model_columns(df: pd.DataFrame) -> tuple[pd.DataFrame, list]:
         "b_bb_rate",
         "b_hr_rate",
         "b_is_rookie",
-        # Stats del pitcher
+        # Pitcher stats
         "p_pa_count",
         "p_avg",
         "p_obp",
@@ -92,6 +94,7 @@ def select_model_columns(df: pd.DataFrame) -> tuple[pd.DataFrame, list]:
 
 
 def temporal_split(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Split the data chronologically into train/val/test using TRAIN_END and VAL_END cutoffs."""
     df = df.copy()
     df["game_date"] = pd.to_datetime(df["game_date"])
 
@@ -103,6 +106,7 @@ def temporal_split(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.Dat
 
 
 def print_split_report(train, val, test, feature_cols):
+    """Print sizes, date ranges, feature list, and per-split outcome distribution."""
     print("\n" + "=" * 60)
     print("RESUMEN DEL SPLIT")
     print("=" * 60)
@@ -119,7 +123,7 @@ def print_split_report(train, val, test, feature_cols):
     for col in feature_cols:
         print(f"  - {col}")
 
-    # Distribución de outcomes por split (sanity check: deben ser similares)
+    # Outcome distribution per split (sanity check: they should be similar)
     print("\nDistribución de outcomes por split (debería ser similar):")
     print(f"  {'Clase':<6} {'Train':>8} {'Val':>8} {'Test':>8}")
     print(f"  {'-' * 35}")
@@ -138,36 +142,36 @@ if __name__ == "__main__":
     print("Split temporal + codificación final de features")
     print("=" * 60)
 
-    # Cargar
+    # Load
     print("\nCargando pa_2025_with_features.parquet...")
     df = pd.read_parquet(DATA_DIR / "pa_2025_with_features.parquet")
     print(f"  {len(df):,} PAs, {df.shape[1]} columnas")
 
-    # Codificar features
+    # Encode features
     print("\nCodificando features categóricas y derivando nuevas...")
     df = encode_features(df)
 
-    # Seleccionar solo las columnas que el modelo necesita
+    # Select only the columns the model needs
     df, feature_cols = select_model_columns(df)
     print(f"  Features finales: {len(feature_cols)}")
 
-    # Split temporal
+    # Temporal split
     print(f"\nHaciendo split temporal...")
     print(f"  Train: hasta {TRAIN_END}")
     print(f"  Val:   {TRAIN_END} → {VAL_END}")
     print(f"  Test:  después de {VAL_END}")
     train, val, test = temporal_split(df)
 
-    # Reporte
+    # Report
     print_split_report(train, val, test, feature_cols)
 
-    # Guardar
+    # Save
     print("\nGuardando splits...")
     train.to_parquet(DATA_DIR / "train.parquet", compression="snappy", index=False)
     val.to_parquet(DATA_DIR / "val.parquet", compression="snappy", index=False)
     test.to_parquet(DATA_DIR / "test.parquet", compression="snappy", index=False)
 
-    # Guardar también la lista de features para el script de training
+    # Also save the feature list for the training script
     pd.Series(feature_cols).to_csv(
         DATA_DIR / "feature_names.csv", index=False, header=False
     )

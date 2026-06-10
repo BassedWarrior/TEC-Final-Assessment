@@ -4,6 +4,8 @@ from typing import Optional
 
 
 class Outcome:
+    """Possible outcomes of a plate appearance, with their canonical string codes."""
+
     STRIKEOUT = "K"
     WALK = "BB"
     HIT_BY_PITCH = "HBP"
@@ -12,12 +14,14 @@ class Outcome:
     TRIPLE = "3B"
     HOME_RUN = "HR"
     OUT_IN_PLAY = "OUT"
-    DOUBLE_PLAY = "DP"  # 2 outs (saca corredor forzado de 1B + bateador)
-    SAC_FLY = "SF"  # 1 out + anota el corredor de 3B
+    DOUBLE_PLAY = "DP"  # 2 outs (removes forced runner from 1B + batter)
+    SAC_FLY = "SF"  # 1 out + the runner on 3B scores
 
 
 @dataclass
 class GameState:
+    """Mutable state of a baseball game: inning, half-inning, outs, bases, scores and batter indices."""
+
     inning: int = 1
     is_top: bool = True
     outs: int = 0
@@ -49,7 +53,7 @@ class GameState:
             self.home_batter_idx = (self.home_batter_idx + 1) % 9
 
     def _end_half_inning(self) -> None:
-        """Limpia bases, resetea outs, cambia de half-inning."""
+        """Clear the bases, reset outs, switch half-inning."""
         self.bases = (False, False, False)
         self.outs = 0
         if self.is_top:
@@ -64,37 +68,39 @@ class GameState:
         return random.random() < prob
 
     def _extra_base_roll(self, prob: float = 0.30) -> bool:
-        """Devuelve True con probabilidad `prob` (runner toma base extra)."""
+        """Return True with probability `prob` (runner takes an extra base)."""
         import random
 
         return random.random() < prob
 
     def apply_outcome(self, outcome: Outcome) -> int:
+        """Apply a plate-appearance outcome to the state (advancing runners, scoring runs, recording outs) and return the number of runs scored."""
         runs_scored = 0
         on1b, on2b, on3b = self.bases
 
         if outcome == Outcome.STRIKEOUT:
             self.outs += 1
 
-        # Out genérico: solo el bateador es eliminado (sin anotación; el sac fly
-        # ahora es su propia clase explícita).
+        # Generic out: only the batter is retired (no scoring; the sac fly is
+        # now its own explicit class).
         elif outcome == Outcome.OUT_IN_PLAY:
             self.outs += 1
 
-        # Double play: si hay corredor forzado en 1B y menos de 2 outs, salen el
-        # corredor de 1B y el bateador (2 outs, limpia 1B); el de 3B anota si lo
-        # hay. Si no hay forzado o ya hay 2 outs, es un out simple del bateador.
+        # Double play: if there is a forced runner on 1B and fewer than 2 outs, the
+        # runner on 1B and the batter are retired (2 outs, clears 1B); the runner on
+        # 3B scores if present. If there is no force or there are already 2 outs, it
+        # is a simple out of the batter.
         elif outcome == Outcome.DOUBLE_PLAY:
             if on1b and self.outs < 2:
                 self.outs += 2
                 if on3b:
                     runs_scored += 1
-                self.bases = (False, on2b, False)  # 1B out, 3B anotó/vacío, 2B queda
+                self.bases = (False, on2b, False)  # 1B out, 3B scored/empty, 2B stays
             else:
                 self.outs += 1
 
-        # Sac fly: 1 out; el corredor de 3B anota (tag-up). Si no hay en 3B, es
-        # un fly-out simple.
+        # Sac fly: 1 out; the runner on 3B scores (tag-up). If there is no runner
+        # on 3B, it is a simple fly-out.
         elif outcome == Outcome.SAC_FLY:
             self.outs += 1
             if on3b:
@@ -103,7 +109,7 @@ class GameState:
 
         elif outcome == Outcome.WALK or outcome == Outcome.HIT_BY_PITCH:
             if on1b and on2b and on3b:
-                runs_scored += 1  # bases llenas, anota el de 3ra
+                runs_scored += 1  # bases loaded, the runner on 3B scores
                 self.bases = (True, True, True)
             elif on1b and on2b:
                 self.bases = (True, True, True)
@@ -119,12 +125,12 @@ class GameState:
                 runs_scored += 1
             # new_2b = on1b
             # self.bases = (True, new_2b, False)
-            # Encontramos que la probabilidad de que un corredor en primera llegue a tercer con un sinlge es del 30%
+            # We found that the probability of a runner on first reaching third on a single is 30%
             if on1b and self._extra_base_roll():
-                # Avance extra: runner de 1B llega a 3B
+                # Extra advance: runner from 1B reaches 3B
                 self.bases = (True, False, True)
             else:
-                # Avance normal: runner de 1B (si existe) va a 2B
+                # Normal advance: runner from 1B (if any) goes to 2B
                 new_2b = on1b
                 self.bases = (True, new_2b, False)
 
@@ -141,7 +147,7 @@ class GameState:
             self.bases = (False, False, True)
 
         elif outcome == Outcome.HOME_RUN:
-            # Anotan todos y el bateador
+            # Everyone scores plus the batter
             runs_scored += sum([on1b, on2b, on3b]) + 1
             self.bases = (False, False, False)
 
@@ -157,27 +163,28 @@ class GameState:
         return runs_scored
 
     def is_game_over(self) -> bool:
-
-        # Si todavía no llegamos al final del 9°, no termina
+        """Return True if the game has ended (regulation, walk-off or resolved extra innings)."""
+        # If we have not yet reached the end of the 9th, it is not over
         if self.inning < 9:
             return False
 
-        # Walk-off: estamos en bottom del 9°+ y el local va arriba
+        # Walk-off: we are in the bottom of the 9th+ and the home team is ahead
         if self.inning >= 9 and not self.is_top and self.home_score > self.away_score:
             return True
 
         if self.inning >= 10 and self.is_top and self.home_score != self.away_score:
-            # Acabó el inning previo (bottom del N-1) con scores distintos
+            # The previous inning (bottom of N-1) ended with different scores
             return True
 
         return False
 
     def copy(self) -> "GameState":
+        """Return a shallow copy of this GameState (bases tuple is immutable)."""
         return GameState(
             inning=self.inning,
             is_top=self.is_top,
             outs=self.outs,
-            bases=self.bases,  # tuple es inmutable, no necesita deepcopy
+            bases=self.bases,  # tuple is immutable, no deepcopy needed
             home_score=self.home_score,
             away_score=self.away_score,
             home_batter_idx=self.home_batter_idx,

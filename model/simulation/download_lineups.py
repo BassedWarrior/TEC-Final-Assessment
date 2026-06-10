@@ -1,14 +1,14 @@
 """
 07_download_lineups.py
 ----------------------
-Baja los lineups oficiales (starting batting order + starting pitcher) de
-MLB Stats API para todos los juegos en el test set.
+Downloads the official lineups (starting batting order + starting pitcher) from
+the MLB Stats API for every game in the test set.
 
-CORRE DESPUÉS de 04_split_and_encode.py.
-Espera ver data/test.parquet.
-Genera data/lineups.parquet con una fila por juego.
+RUNS AFTER 04_split_and_encode.py.
+Expects data/test.parquet to exist.
+Produces data/lineups.parquet with one row per game.
 
-Tiempo estimado: ~10 minutos (500 juegos × 1.2 segundos por request con rate limit).
+Estimated time: ~10 minutes (500 games × 1.2 seconds per request with rate limit).
 """
 
 import json
@@ -21,33 +21,33 @@ import requests
 from tqdm import tqdm
 
 # ---------------------------------------------------------------------------
-# Configuración
+# Configuration
 # ---------------------------------------------------------------------------
 DATA_DIR = Path("./data")
 CACHE_DIR = DATA_DIR / "boxscore_cache"
 CACHE_DIR.mkdir(exist_ok=True)
 
 API_BASE = "https://statsapi.mlb.com/api/v1/game"
-RATE_LIMIT_SECONDS = 1.0  # ser amables con la API
+RATE_LIMIT_SECONDS = 1.0  # be nice to the API
 TIMEOUT_SECONDS = 10
 
 
 # ---------------------------------------------------------------------------
-# Funciones principales
+# Main functions
 # ---------------------------------------------------------------------------
 def fetch_boxscore(game_pk: int) -> Optional[dict]:
     """
-    Baja el boxscore de un juego desde la API de MLB, con caché en disco.
-    Si ya está en caché, lo lee del disco en lugar de pegarle a la API.
+    Download a game's boxscore from the MLB API, with on-disk cache.
+    If already cached, read it from disk instead of hitting the API.
     """
     cache_path = CACHE_DIR / f"{game_pk}.json"
 
-    # Si ya tenemos el archivo, leerlo
+    # If we already have the file, read it
     if cache_path.exists():
         with open(cache_path) as f:
             return json.load(f)
 
-    # Si no, bajarlo
+    # Otherwise, download it
     url = f"{API_BASE}/{game_pk}/boxscore"
     try:
         response = requests.get(url, timeout=TIMEOUT_SECONDS)
@@ -58,7 +58,7 @@ def fetch_boxscore(game_pk: int) -> Optional[dict]:
 
     data = response.json()
 
-    # Guardar en caché
+    # Save to cache
     with open(cache_path, "w") as f:
         json.dump(data, f)
 
@@ -70,31 +70,31 @@ def fetch_boxscore(game_pk: int) -> Optional[dict]:
 
 def extract_lineup(boxscore: dict, side: str) -> Optional[dict]:
     """
-    Extrae el lineup (9 batters + pitcher abridor) de un boxscore.
+    Extract the lineup (9 batters + starting pitcher) from a boxscore.
 
     Args:
-        boxscore: JSON de la API
-        side: "home" o "away"
+        boxscore: API JSON
+        side: "home" or "away"
 
     Returns:
-        dict con keys: batter_ids (lista de 9), pitcher_id, team_name
-        None si no se pudo parsear
+        dict with keys: batter_ids (list of 9), pitcher_id, team_name
+        None if it could not be parsed
     """
     try:
         team_data = boxscore["teams"][side]
         team_name = team_data["team"]["name"]
 
-        # batting_order es una lista de IDs (con sufijos para batting position)
-        # cada ID está en formato "ID00" donde 00 es la posición en lineup
+        # batting_order is a list of IDs (with suffixes for batting position)
+        # each ID is in the format "ID00" where 00 is the position in the lineup
         batting_order_ids = team_data.get("battingOrder", [])
 
         if len(batting_order_ids) < 9:
-            return None  # juego no tuvo lineup completo (raro)
+            return None  # game did not have a complete lineup (rare)
 
-        # Los IDs vienen como strings, los primeros 9 son los starters
+        # The IDs come as strings; the first 9 are the starters
         batter_ids = [int(bid) for bid in batting_order_ids[:9]]
 
-        # Pitcher abridor: primer ID en la lista de pitchers
+        # Starting pitcher: first ID in the pitchers list
         pitcher_ids = team_data.get("pitchers", [])
         if not pitcher_ids:
             return None
@@ -110,7 +110,7 @@ def extract_lineup(boxscore: dict, side: str) -> Optional[dict]:
 
 
 def process_game(game_pk: int, game_date: str) -> Optional[dict]:
-    """Baja y procesa un juego completo. Devuelve un dict con ambos lineups."""
+    """Download and process a full game. Returns a dict with both lineups."""
     boxscore = fetch_boxscore(game_pk)
     if boxscore is None:
         return None
@@ -141,7 +141,7 @@ if __name__ == "__main__":
     print("Bajando lineups oficiales desde MLB Stats API")
     print("=" * 60)
 
-    # Cargar test set para saber qué juegos necesitamos
+    # Load the test set to know which games we need
     test = pd.read_parquet(DATA_DIR / "test.parquet")
     unique_games = (
         test[["game_pk", "game_date"]].drop_duplicates().reset_index(drop=True)
@@ -151,7 +151,7 @@ if __name__ == "__main__":
         f"Rango de fechas: {unique_games['game_date'].min()} → {unique_games['game_date'].max()}"
     )
 
-    # Contar cuántos ya están en caché
+    # Count how many are already cached
     cached = sum(
         1
         for _, row in unique_games.iterrows()
@@ -163,7 +163,7 @@ if __name__ == "__main__":
         f"Tiempo estimado: ~{(len(unique_games) - cached) * RATE_LIMIT_SECONDS / 60:.1f} minutos"
     )
 
-    # Procesar todos los juegos
+    # Process all games
     print(f"\nDescargando...")
     rows = []
     failed = []
@@ -175,7 +175,7 @@ if __name__ == "__main__":
         else:
             rows.append(result)
 
-    # Guardar como Parquet
+    # Save as Parquet
     if rows:
         df = pd.DataFrame(rows)
         out_path = DATA_DIR / "lineups.parquet"
@@ -187,7 +187,7 @@ if __name__ == "__main__":
         print(f"  ✓ Guardado en:   {out_path.name}")
         print(f"  ✓ Tamaño:        {out_path.stat().st_size / 1e3:.1f} KB")
 
-        # Sample para validar
+        # Sample to validate
         print(f"\nMuestra (primer juego):")
         print(df.iloc[0].to_dict())
     else:

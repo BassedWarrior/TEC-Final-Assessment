@@ -10,27 +10,27 @@ from pybaseball import statcast
 DATA_DIR = Path("../data")
 DATA_DIR.mkdir(exist_ok=True)
 
-# Rangos de fechas de temporada regular (aproximados — pybaseball filtra lo real)
+# Regular-season date ranges (approximate — pybaseball filters the real ones)
 SEASONS = {
     2024: ("2024-03-28", "2024-09-29"),
     2025: ("2025-03-27", "2025-09-28"),
 }
 
-# Bajamos en ventanas chicas con reintentos. Una sola llamada a statcast() de
-# toda la temporada lanza decenas de requests en paralelo; si UNO devuelve un
-# mensaje de error (rate-limit), pybaseball revienta toda la descarga. Por
-# ventanas, un fallo transitorio solo reintenta esa ventana.
+# We download in small windows with retries. A single statcast() call for the
+# whole season fires dozens of requests in parallel; if ONE returns an error
+# message (rate-limit), pybaseball blows up the entire download. With windows,
+# a transient failure only retries that window.
 CHUNK_DAYS = 14
 MAX_RETRIES = 4
-RETRY_SLEEP = 5  # segundos, con backoff lineal
+RETRY_SLEEP = 5  # seconds, with linear backoff
 
 
 def _statcast_chunk(start_date: str, end_date: str) -> pd.DataFrame:
-    """statcast() de una ventana con reintentos ante errores transitorios."""
+    """statcast() for one window with retries on transient errors."""
     for attempt in range(1, MAX_RETRIES + 1):
         try:
             return statcast(start_dt=start_date, end_dt=end_date)
-        except Exception as e:  # noqa: BLE001 - Savant devuelve errores variados
+        except Exception as e:  # noqa: BLE001 - Savant returns varied errors
             msg = str(e)[:120]
             if attempt == MAX_RETRIES:
                 print(f"    [FALLO definitivo] {start_date}→{end_date}: {msg}")
@@ -45,8 +45,8 @@ def _statcast_chunk(start_date: str, end_date: str) -> pd.DataFrame:
 
 def download_season(year: int, start_date: str, end_date: str) -> pd.DataFrame:
     """
-    Baja todos los pitches de una temporada en ventanas de CHUNK_DAYS días,
-    cada una con reintentos, y las concatena.
+    Download all pitches of a season in windows of CHUNK_DAYS days,
+    each with retries, and concatenate them.
     """
     print(f"\n{'=' * 60}")
     print(f"  Descargando temporada {year} ({start_date} → {end_date})")
@@ -82,7 +82,7 @@ def download_season(year: int, start_date: str, end_date: str) -> pd.DataFrame:
 
 
 def save_parquet(df: pd.DataFrame, year: int) -> Path:
-    """Guarda el DataFrame como Parquet (formato columnar, comprimido)."""
+    """Save the DataFrame as Parquet (compressed columnar format)."""
     path = DATA_DIR / f"statcast_{year}.parquet"
     df.to_parquet(path, compression="snappy", index=False)
     size_mb = path.stat().st_size / 1e6
@@ -109,7 +109,7 @@ if __name__ == "__main__":
     print("Descarga completa.")
     print("=" * 60)
 
-    # Resumen final
+    # Final summary
     for year in SEASONS:
         path = DATA_DIR / f"statcast_{year}.parquet"
         if path.exists():

@@ -24,7 +24,7 @@ EVENT_MAPPING = {
     "triple": "3B",
     "home_run": "HR",
     "field_error": "1B",
-    # Out genérico (1 out, el bateador es eliminado)
+    # Generic out (1 out, the batter is retired)
     "field_out": "OUT",
     "force_out": "OUT",
     "fielders_choice": "OUT",
@@ -32,12 +32,12 @@ EVENT_MAPPING = {
     "sac_bunt": "OUT",
     "sac_bunt_double_play": "OUT",
     "other_out": "OUT",
-    "batter_interference": "OUT",  # raro
-    # Double play (2 outs). Triple play se pliega aquí (≈2 casos/temporada).
+    "batter_interference": "OUT",  # rare
+    # Double play (2 outs). Triple play is folded in here (≈2 cases/season).
     "grounded_into_double_play": "DP",
     "double_play": "DP",
     "triple_play": "DP",
-    # Sac fly (1 out + anota el corredor de 3B)
+    # Sacrifice fly (1 out + the runner on 3B scores)
     "sac_fly": "SF",
     "sac_fly_double_play": "SF",
 }
@@ -70,23 +70,24 @@ PA_LEVEL_COLUMNS = [
     "at_bat_number",
     "pitcher",
     "batter",
-    "p_throws",  # mano del pitcher (L/R)
-    "stand",  # mano del bateador (L/R)
+    "p_throws",  # pitcher's hand (L/R)
+    "stand",  # batter's hand (L/R)
     "inning",
     "inning_topbot",
     "outs_when_up",
-    "on_1b",  # ID del runner en 1B (NaN si vacío)
+    "on_1b",  # runner ID on 1B (NaN if empty)
     "on_2b",
     "on_3b",
     "bat_score",
     "fld_score",
     "home_team",
     "away_team",
-    "events",  # outcome original (lo renombramos a events_original)
+    "events",  # original outcome (we rename it to events_original)
 ]
 
 
 def load_statcast(year: int) -> pd.DataFrame:
+    """Load the cached Statcast pitch-level parquet file for a season."""
     path = DATA_DIR / f"statcast_{year}.parquet"
     if not path.exists():
         raise FileNotFoundError(
@@ -99,16 +100,17 @@ def load_statcast(year: int) -> pd.DataFrame:
 
 
 def collapse_to_pa(pitches: pd.DataFrame) -> pd.DataFrame:
+    """Collapse pitch-level rows to one row per plate appearance (the last pitch of each)."""
     last_pitches = pitches[pitches["events"].notna()].copy()
 
-    # Defensa: cada (game_pk, at_bat_number) debería aparecer una sola vez aquí.
-    # Si aparece más de una, hay un dato raro — nos quedamos con el último.
+    # Safeguard: each (game_pk, at_bat_number) should appear only once here.
+    # If it appears more than once, there is a weird record — we keep the last one.
 
     last_pitches = last_pitches.sort_values(
         ["game_pk", "at_bat_number"]
     ).drop_duplicates(subset=["game_pk", "at_bat_number"], keep="last")
 
-    # Nos quedamos solo con las columnas que necesitamos a nivel PA
+    # We keep only the columns we need at the PA level
 
     available_cols = [c for c in PA_LEVEL_COLUMNS if c in last_pitches.columns]
     pa = last_pitches[available_cols].copy()
@@ -118,27 +120,27 @@ def collapse_to_pa(pitches: pd.DataFrame) -> pd.DataFrame:
 
 
 def add_pa_outcome(pa: pd.DataFrame) -> pd.DataFrame:
-
+    """Drop non-PA events and map each PA to one of the outcome classes via EVENT_MAPPING."""
     n_before = len(pa)
     pa = pa[~pa["events_original"].isin(EVENTS_TO_DROP)].copy()
     n_dropped_drop_list = n_before - len(pa)
 
-    # Mapear los eventos a las 8 clases
+    # Map the events to the 8 classes
     pa["pa_outcome"] = pa["events_original"].map(EVENT_MAPPING)
 
-    # Reportar eventos no mapeados (deberían ser pocos o ninguno)
+    # Report unmapped events (there should be few or none)
     unmapped = pa[pa["pa_outcome"].isna()]
     if len(unmapped) > 0:
         print(f"\n  {len(unmapped)} PAs con events no mapeados:")
         print(unmapped["events_original"].value_counts().head(10))
-        # Los descartamos para no contaminar
+        # We discard them to avoid contamination
         pa = pa[pa["pa_outcome"].notna()].copy()
 
     return pa, n_dropped_drop_list
 
 
 def add_runner_booleans(pa: pd.DataFrame) -> pd.DataFrame:
-    """Convierte on_1b/on_2b/on_3b de IDs (o NaN) a booleanos."""
+    """Convert on_1b/on_2b/on_3b from IDs (or NaN) to booleans."""
     for base in ["on_1b", "on_2b", "on_3b"]:
         if base in pa.columns:
             pa[base] = pa[base].notna()
@@ -146,12 +148,12 @@ def add_runner_booleans(pa: pd.DataFrame) -> pd.DataFrame:
 
 
 def report_distribution(pa: pd.DataFrame, year: int) -> None:
-    """Reporta la distribución de outcomes y la compara con liga promedio."""
+    """Report the outcome distribution and compare it against league average."""
     print(f"\n  Distribución de outcomes en {year}:")
     print(f"  {'Clase':<6} {'Conteo':>10} {'%':>8}    {'Liga 2024':>10}")
     print(f"  {'-' * 50}")
 
-    # Benchmarks de liga (de simulator.py)
+    # League benchmarks (from simulator.py)
     league_avg = {
         "K": 0.226,
         "BB": 0.082,
@@ -208,7 +210,7 @@ if __name__ == "__main__":
 
         report_distribution(pa, year)
 
-        # Guardar
+        # Save
         pa.to_parquet(out_path, compression="snappy", index=False)
         size_mb = out_path.stat().st_size / 1e6
         print(f"\n  Guardado en {out_path.name} ({size_mb:.1f} MB)")

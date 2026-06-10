@@ -6,7 +6,7 @@ import lightgbm as lgb
 from sklearn.metrics import log_loss, accuracy_score, confusion_matrix
 
 DATA_DIR = Path("../data")
-# Path canónico de modelos (MODELO/models), de donde leen predict.py y MonteCarlo.py.
+# Canonical models path (MODELO/models), read by predict.py and MonteCarlo.py.
 MODELS_DIR = Path("./models")
 MODELS_DIR.mkdir(exist_ok=True)
 
@@ -35,6 +35,7 @@ EARLY_STOPPING_ROUNDS = 50
 
 
 def load_splits():
+    """Load train/val/test parquet splits and the feature name list."""
     print("Cargando splits...")
     train = pd.read_parquet(DATA_DIR / "train.parquet")
     val = pd.read_parquet(DATA_DIR / "val.parquet")
@@ -49,13 +50,14 @@ def load_splits():
 
 
 def split_xy(df, feature_names):
-    """Separa features (X) y target (y) en arrays."""
+    """Split features (X) and target (y) into arrays."""
     X = df[feature_names].values
     y = df["target"].values
     return X, y
 
 
 def train_model(X_train, y_train, X_val, y_val, feature_names):
+    """Train the multiclass LightGBM PA model with early stopping on the validation set."""
     print("\n" + "=" * 60)
     print("Entrenando LightGBM multiclase")
     print("=" * 60)
@@ -87,20 +89,20 @@ def train_model(X_train, y_train, X_val, y_val, feature_names):
 
 
 def baseline_uniform(y_train, y_test):
-    """Predice la distribución uniforme (1/8 para cada clase). Worst case."""
+    """Predict the uniform distribution (1/8 for each class). Worst case."""
     pred = np.full((len(y_test), NUM_CLASSES), 1.0 / NUM_CLASSES)
     return log_loss(y_test, pred, labels=list(range(NUM_CLASSES)))
 
 
 def baseline_league_avg(y_train, y_test):
-    """Predice la distribución promedio del train set. Baseline natural."""
+    """Predict the average distribution of the train set. Natural baseline."""
     train_freqs = np.bincount(y_train, minlength=NUM_CLASSES) / len(y_train)
     pred = np.tile(train_freqs, (len(y_test), 1))
     return log_loss(y_test, pred, labels=list(range(NUM_CLASSES)))
 
 
 def evaluate(model, X, y, name):
-    """Predice y reporta log loss + accuracy en un set dado."""
+    """Predict and report log loss + accuracy on a given set."""
     pred_proba = model.predict(X, num_iteration=model.best_iteration)
     pred_class = pred_proba.argmax(axis=1)
     ll = log_loss(y, pred_proba, labels=list(range(NUM_CLASSES)))
@@ -110,7 +112,7 @@ def evaluate(model, X, y, name):
 
 
 def print_distribution_comparison(y_true, pred_proba):
-    """Compara distribución real vs distribución predicha promedio en test."""
+    """Compare the real distribution vs the average predicted distribution on test."""
     print("\n" + "-" * 60)
     print("  Distribución real vs predicha (promedio en test)")
     print("-" * 60)
@@ -126,7 +128,7 @@ def print_distribution_comparison(y_true, pred_proba):
 
 
 def print_feature_importance(model, feature_names, top_n=15):
-    """Imprime las features más importantes según ganancia acumulada."""
+    """Print the most important features by accumulated gain."""
     importance = model.feature_importance(importance_type="gain")
     fi = pd.DataFrame(
         {
@@ -150,7 +152,7 @@ def print_feature_importance(model, feature_names, top_n=15):
 
 
 def print_confusion_matrix(y_true, pred_proba):
-    """Matriz de confusión (etiqueta verdadera vs predicha)."""
+    """Confusion matrix (true label vs predicted label)."""
     pred_class = pred_proba.argmax(axis=1)
     cm = confusion_matrix(y_true, pred_class, labels=list(range(NUM_CLASSES)))
     print("\n" + "-" * 60)
@@ -170,44 +172,44 @@ def diagnostic_model_discrimination(
     pred_proba: np.ndarray,
 ):
     """
-    Diagnósticos detallados de qué tanto el modelo discrimina entre
-    situaciones distintas. Imprime ejemplos concretos y comparaciones.
+    Detailed diagnostics of how much the model discriminates between
+    different situations. Prints concrete examples and comparisons.
     """
     print("\n" + "=" * 60)
     print("DIAGNÓSTICO: ¿El modelo discrimina entre situaciones?")
     print("=" * 60)
 
     # -----------------------------------------------------------------
-    # 1. Predicciones para PAs específicos del test set
+    # 1. Predictions for specific PAs from the test set
     # -----------------------------------------------------------------
     print("\n[1] Ejemplos de predicciones del test set:")
     print("-" * 60)
 
-    # Indexar test con la predicción correspondiente
+    # Index test with the corresponding prediction
     test_reset = test_df.reset_index(drop=True)
 
-    # Encontrar 4 PAs con perfiles muy distintos
+    # Find 4 PAs with very different profiles
     examples = []
 
-    # PA con bateador de alto K_rate vs pitcher de alto K_rate
+    # PA with a high K_rate batter vs a high K_rate pitcher
     high_k_mask = (test_reset["b_k_rate"] > 0.30) & (test_reset["p_k_rate"] > 0.28)
     if high_k_mask.any():
         idx = test_reset[high_k_mask].index[0]
         examples.append(("Alto K bateador vs Alto K pitcher", idx))
 
-    # PA con bateador de bajo K_rate vs pitcher de bajo K_rate
+    # PA with a low K_rate batter vs a low K_rate pitcher
     low_k_mask = (test_reset["b_k_rate"] < 0.15) & (test_reset["p_k_rate"] < 0.18)
     if low_k_mask.any():
         idx = test_reset[low_k_mask].index[0]
         examples.append(("Bajo K bateador vs Bajo K pitcher", idx))
 
-    # PA con bateador de alto poder
+    # PA with a high power batter
     high_power_mask = (test_reset["b_iso"] > 0.250) & (test_reset["b_hr_rate"] > 0.05)
     if high_power_mask.any():
         idx = test_reset[high_power_mask].index[0]
         examples.append(("Bateador de alto poder", idx))
 
-    # PA con rookie
+    # PA with a rookie
     rookie_mask = test_reset["b_is_rookie"] == 1
     if rookie_mask.any():
         idx = test_reset[rookie_mask].index[0]
@@ -233,12 +235,12 @@ def diagnostic_model_discrimination(
             print(f"      {outcome:<4} {probs[i] * 100:>5.2f}%  {bar}")
 
     # -----------------------------------------------------------------
-    # 2. Predicciones sintéticas: aislar efecto de calidad de jugadores
+    # 2. Synthetic predictions: isolate the effect of player quality
     # -----------------------------------------------------------------
     print("\n\n[2] Escenarios sintéticos (mismo contexto, distintos jugadores):")
     print("-" * 60)
 
-    # Tomamos un PA "base" del test y modificamos las stats de jugadores
+    # Take a "base" PA from the test set and modify the player stats
     base_row = test_reset.iloc[0].copy()
     base_features = base_row[feature_names].values.astype(float)
 
@@ -309,7 +311,7 @@ def diagnostic_model_discrimination(
         },
     }
 
-    # Para hacer las predicciones, modificamos solo las columnas relevantes
+    # To make the predictions, modify only the relevant columns
     fname_to_idx = {name: i for i, name in enumerate(feature_names)}
 
     synthetic_preds = {}
@@ -323,7 +325,7 @@ def diagnostic_model_discrimination(
         )[0]
         synthetic_preds[label] = probs
 
-    # Imprimir tabla comparativa
+    # Print comparison table
     print(f"\n  {'Outcome':<6}", end="")
     for label in scenarios:
         short = (
@@ -344,12 +346,12 @@ def diagnostic_model_discrimination(
         print()
 
     # -----------------------------------------------------------------
-    # 3. Predicciones agrupadas por calidad de pitcher
+    # 3. Predictions grouped by pitcher quality
     # -----------------------------------------------------------------
     print("\n\n[3] Predicciones promedio por calidad de pitcher (test set):")
     print("-" * 60)
 
-    # Dividir el test set por percentiles de p_k_rate
+    # Split the test set by p_k_rate percentiles
     p_k_rate_test = test_reset["p_k_rate"].values
     q33 = np.quantile(p_k_rate_test, 0.33)
     q67 = np.quantile(p_k_rate_test, 0.67)
@@ -377,7 +379,7 @@ def diagnostic_model_discrimination(
 if __name__ == "__main__":
     train, val, test, feature_names = load_splits()
 
-    # Preparar X/y
+    # Prepare X/y
     X_train, y_train = split_xy(train, feature_names)
     X_val, y_val = split_xy(val, feature_names)
     X_test, y_test = split_xy(test, feature_names)
