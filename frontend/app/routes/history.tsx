@@ -174,7 +174,7 @@ export default function History() {
         {/* Table */}
         <div style={{ flex: 1, overflowY: "auto", padding: "16px 24px" }}>
           {filtered.length === 0 ? (
-            <div style={{ padding: 40, textAlign: "center", fontSize: 14, color: "rgba(255,255,255,0.3)" }}>No simulations match your search</div>
+            <div style={{ padding: 40, textAlign: "left", fontSize: 16, color: "rgba(255,255,255,0.8)", background: "rgba(192,30,46,0.5)", borderRadius: 10}}>No simulations match your search</div>
           ) : (
             <div style={{ background: "rgba(13,17,23,0.85)", border: "0.5px solid rgba(255,255,255,0.08)", borderRadius: 10, overflow: "hidden" }}>
               <table style={{ width: "100%", borderCollapse: "collapse" }} aria-label="Simulation history">
