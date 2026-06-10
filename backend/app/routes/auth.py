@@ -16,8 +16,8 @@ from pydantic import BaseModel, EmailStr, field_validator
 
 from app.db.session import get_db
 from app.models.user import User
-from app.core.security import verify_password, get_password_hash, create_access_token
-from app.core.dependencies import get_current_user
+from app.utils.security import verify_password, get_password_hash, create_access_token
+from app.utils.dependencies import get_current_user
 from app.config import settings
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
