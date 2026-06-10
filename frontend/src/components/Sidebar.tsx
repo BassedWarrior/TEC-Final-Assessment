@@ -2,10 +2,10 @@ import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router"
 
 const navItems = [
-  { label: "Dashboard", icon: "⊞", path: "/" },
-  { label: "Simulate", icon: "▶", path: "/simulate" },
+  { label: "Dashboard",  icon: "⊞", path: "/" },
   { label: "Statistics", icon: "≡", path: "/statistics" },
-  { label: "History", icon: "◷", path: "/history" },
+  { label: "Simulate",   icon: "▶", path: "/simulate" },
+  { label: "History",    icon: "◷", path: "/history" },
 ]
 
 interface SidebarProps {
