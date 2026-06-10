@@ -1,7 +1,13 @@
 import { useState, useRef } from "react"
-import Sidebar from "../../src/components/Sidebar"
-import { MOCK_BATTERS, MOCK_PITCHERS } from "../../src/data/mockPlayers"
-import type { Batter, Pitcher } from "../../src/data/mockPlayers"
+import { PageLayout, TopBar, SummaryBar } from "../components/Layout";
+import { MOCK_BATTERS, MOCK_PITCHERS } from "../data/mockPlayers"
+import type { Batter, Pitcher } from "../data/mockPlayers"
+import type { Route } from "./+types/sandbox"
+import { requireAuth } from "../utils/auth"
+
+export async function loader({ request }: Route.LoaderArgs) {
+  return await requireAuth(request)
+}
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -590,31 +596,9 @@ export default function Sandbox() {
   const readyToSim = canSimulate()
 
   return (
-    <div style={{ display: "flex", height: "100vh", fontFamily: "'DM Sans', sans-serif", backgroundImage: "url(https://p.potaufeu.asahi.com/9f43-p/picture/30110938/6ff98ecd602934fa9926cbf982a55015.jpg)" }}>
-      <Sidebar activePath="/sandbox" username="Fausto" />
-
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-
+    <PageLayout activePath="/sandbox" backgroundImage="/images/bg-sandbox.jpg">
         {/* Topbar */}
-        <div style={{ padding: "18px 24px", borderBottom: "0.5px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-          <div>
-            <div style={{ fontSize: 16, fontWeight: 600, color: "rgba(255, 255, 255, 0.71)", letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 3 }}>MLB · 2025</div>
-            <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 40, fontWeight: 700, color: "#f0ede6" }}>Sandbox</h1>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <button onClick={handleReset}
-              style={{ padding: "8px 16px", borderRadius: 6, fontSize: 16, fontWeight: 500, background: "transparent", border: "0.6px solid rgba(255, 255, 255, 0.28)", color: "rgba(255, 255, 255, 0.76)", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "all .15s" }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.35)"; (e.currentTarget as HTMLButtonElement).style.color = "#f0ede6" }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.15)"; (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.5)" }}>
-              Reset
-            </button>
-            <button onClick={handleSimulate} disabled={!readyToSim || simulating}
-              aria-label="Run simulation"
-              style={{ padding: "8px 22px", borderRadius: 6, fontSize: 16, fontWeight: 600, background: readyToSim && !simulating ? "#c01e2e" : "rgba(192,30,46,0.25)", border: "0.6px solid rgba(255,0,0,1)", color: readyToSim && !simulating ? "#fff" : "rgba(241, 230, 230, 0.96)", cursor: readyToSim && !simulating ? "pointer" : "not-allowed", fontFamily: "'DM Sans', sans-serif", transition: "all .2s" }}>
-              {simulating ? "Simulating…" : "▶ Run Simulation"}
-            </button>
-          </div>
-        </div>
+        <TopBar title="Sandbox" />
 
         {/* Hint bar */}
         {!readyToSim && (
@@ -625,7 +609,6 @@ export default function Sandbox() {
 
         {/* Main content area */}
         <div style={{ flex: 1, display: "flex", overflow: "hidden", padding: "16px 16px 16px 16px", gap: 12 }}>
-
           {/* Player Pool */}
           <div style={{ width: 220, flexShrink: 0 }}>
             <PlayerPool
@@ -686,9 +669,6 @@ export default function Sandbox() {
             </div>
           </div>
         </div>
-      </div>
-
-      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" />
-    </div>
+    </PageLayout>
   )
 }
