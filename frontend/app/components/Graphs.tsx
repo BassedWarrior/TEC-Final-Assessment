@@ -1,14 +1,20 @@
+// Graph.tsx
 import { teamMeta, mockGames, type Game, type InningScore } from "../data/mockData"
 import { useState } from "react"
 import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts"
 
 type StatMode = "score" | "hits" | "hrs" | "ks"
 
-// Graph.tsx
-export default function Graph({ game, backgroundColor, fullWidth = false }: { 
+export default function Graph({ 
+  game, 
+  backgroundColor, 
+  fullWidth = false,
+  isEmbedded = false  // New prop to detect if it's embedded in a table
+}: { 
   game: Game; 
   backgroundColor?: string;
   fullWidth?: boolean;
+  isEmbedded?: boolean;
 }) {
   const [mode, setMode] = useState<StatMode>("score")
   const team1Color = teamMeta[game.team1]?.color ?? "#888"
@@ -33,7 +39,37 @@ export default function Graph({ game, backgroundColor, fullWidth = false }: {
     }
   })
 
-  // ... StatPill component remains the same ...
+  function StatPill({ label, v1, v2, stat }: { label: string; v1: number; v2: number; stat: StatMode }) {
+    const active = mode === stat
+    return (
+      <div
+        onClick={() => setMode(stat)}
+        style={{
+          flex: 1,
+          background: active ? "rgba(192,30,46,0.15)" : "rgba(255,255,255,0.03)",
+          border: active ? "0.5px solid rgba(192,30,46,0.5)" : "0.5px solid rgba(255,255,255,0.08)",
+          borderRadius: 8,
+          padding: isEmbedded ? "8px 12px" : "12px 16px",  // Smaller padding when embedded
+          cursor: "pointer",
+          transition: "all .15s",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: isEmbedded ? 6 : 10 }}>
+          <div style={{ fontSize: isEmbedded ? 10 : 12, fontWeight: 600, color: active ? "#f07080" : "white", textTransform: "uppercase", letterSpacing: ".08em" }}>{label}</div>
+          {active && <div style={{ fontSize: isEmbedded ? 8 : 10, fontWeight: 600, color: "#f07080", letterSpacing: ".06em" }}>● ACTIVE</div>}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span style={{ fontSize: isEmbedded ? 20 : 30, fontWeight: 700, color: team1Color }}>{v1}</span>
+          <span style={{ fontSize: isEmbedded ? 14 : 18, color: "white" }}>vs</span>
+          <span style={{ fontSize: isEmbedded ? 20 : 30, fontWeight: 700, color: team2Color }}>{v2}</span>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", marginTop: isEmbedded ? 2 : 4 }}>
+          <span style={{ fontSize: isEmbedded ? 9 : 11, fontWeight: 600, color: "white" }}>{game.team1}</span>
+          <span style={{ fontSize: isEmbedded ? 9 : 11, fontWeight: 600, color: "white" }}>{game.team2}</span>
+        </div>
+      </div>
+    )
+  }
 
   const chartLabel: Record<StatMode, string> = {
     score: "Score Progression",
@@ -42,6 +78,55 @@ export default function Graph({ game, backgroundColor, fullWidth = false }: {
     ks:    "Strikeouts Progression",
   }
 
+  // Embedded version (for dashboard table)
+  if (isEmbedded) {
+    return (
+      <tr>
+        <td colSpan={8} style={{ padding: "0 14px 20px 14px", background: "rgba(0,0,0,0.2)" }}>
+          <div style={{ 
+            background: backgroundColor || "rgba(13, 17, 23, 0.85)", 
+            border: "0.5px solid rgba(255,255,255,0.08)", 
+            borderRadius: 8, 
+            padding: "16px 20px",
+          }}>
+            {/* Simplified layout for embedded view */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "white", letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 12 }}>
+                Prediction Details
+              </div>
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                <StatPill label="Score" v1={score1} v2={score2} stat="score" />
+                <StatPill label="Hits" v1={game.hits[0]} v2={game.hits[1]} stat="hits" />
+                <StatPill label="HRs" v1={game.homeruns[0]} v2={game.homeruns[1]} stat="hrs" />
+                <StatPill label="K's" v1={game.strikeouts[0]} v2={game.strikeouts[1]} stat="ks" />
+              </div>
+            </div>
+            
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "white", letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 12 }}>
+                {chartLabel[mode]}
+              </div>
+              <ResponsiveContainer width="100%" height={200}>
+                <LineChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: -20 }}>
+                  <XAxis dataKey="name" tick={{ fontSize: 12, fontWeight: 700, fill: "white" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 12, fill: "white" }} axisLine={false} tickLine={false} allowDecimals={false} />
+                  <Tooltip
+                    contentStyle={{ background: "rgba(27, 25, 46, 0.67)", border: "0.5px solid rgba(255,255,255,0.1)", borderRadius: 6, fontSize: 13 }}
+                    labelStyle={{ color: "white", marginBottom: 4, fontSize: 13, fontWeight: 600 }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.7)", paddingTop: 8 }} />
+                  <Line type="monotone" dataKey={game.team1} stroke={team1Color} strokeWidth={2} dot={{ r: 3, fill: team1Color }} activeDot={{ r: 5 }} />
+                  <Line type="monotone" dataKey={game.team2} stroke={team2Color} strokeWidth={2} dot={{ r: 3, fill: team2Color }} activeDot={{ r: 5 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </td>
+      </tr>
+    )
+  }
+
+  // Full version (for sandbox page)
   return (
     <div style={{ 
       width: fullWidth ? "100%" : "auto",
@@ -51,7 +136,6 @@ export default function Graph({ game, backgroundColor, fullWidth = false }: {
       padding: "20px 24px", 
       display: "flex", 
       gap: 32,
-      // Make it responsive
       flexWrap: "wrap",
     }}>
       {/* Left: stats */}
@@ -88,9 +172,9 @@ export default function Graph({ game, backgroundColor, fullWidth = false }: {
         </div>
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <StatPill label="Hits" v1={game.hits[0]} v2={game.hits[1]} stat="hits" mode={mode} setMode={setMode} team1Color={team1Color} team2Color={team2Color} game={game} />
-          <StatPill label="HRs" v1={game.homeruns[0]} v2={game.homeruns[1]} stat="hrs" mode={mode} setMode={setMode} team1Color={team1Color} team2Color={team2Color} game={game} />
-          <StatPill label="K's" v1={game.strikeouts[0]} v2={game.strikeouts[1]} stat="ks" mode={mode} setMode={setMode} team1Color={team1Color} team2Color={team2Color} game={game} />
+          <StatPill label="Hits" v1={game.hits[0]} v2={game.hits[1]} stat="hits" />
+          <StatPill label="HRs" v1={game.homeruns[0]} v2={game.homeruns[1]} stat="hrs" />
+          <StatPill label="K's" v1={game.strikeouts[0]} v2={game.strikeouts[1]} stat="ks" />
         </div>
       </div>
 
@@ -116,38 +200,6 @@ export default function Graph({ game, backgroundColor, fullWidth = false }: {
             <Line type="monotone" dataKey={game.team2} stroke={team2Color} strokeWidth={2} dot={{ r: 4, fill: team2Color }} activeDot={{ r: 6 }} />
           </LineChart>
         </ResponsiveContainer>
-      </div>
-    </div>
-  )
-}
-
-// Update StatPill to accept props
-function StatPill({ label, v1, v2, stat, mode, setMode, team1Color, team2Color, game }: any) {
-  const active = mode === stat
-  return (
-    <div
-      onClick={() => setMode(stat)}
-      style={{
-        flex: 1,
-        background: active ? "rgba(192,30,46,0.15)" : "rgba(255,255,255,0.03)",
-        border: active ? "0.5px solid rgba(192,30,46,0.5)" : "0.5px solid rgba(255,255,255,0.08)",
-        borderRadius: 8, padding: "12px 16px",
-        cursor: "pointer",
-        transition: "all .15s",
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: active ? "#f07080" : "white", textTransform: "uppercase", letterSpacing: ".08em" }}>{label}</div>
-        {active && <div style={{ fontSize: 10, fontWeight: 600, color: "#f07080", letterSpacing: ".06em" }}>● ACTIVE</div>}
-      </div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 30, fontWeight: 700, color: team1Color }}>{v1}</span>
-        <span style={{ fontSize: 18, color: "white" }}>vs</span>
-        <span style={{ fontSize: 30, fontWeight: 700, color: team2Color }}>{v2}</span>
-      </div>
-      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
-        <span style={{ fontSize: 11, fontWeight: 600, color: "white" }}>{game.team1}</span>
-        <span style={{ fontSize: 11, fontWeight: 600, color: "white" }}>{game.team2}</span>
       </div>
     </div>
   )
