@@ -4,7 +4,7 @@ import { useNavigate } from "react-router"
 const navItems = [
   { label: "Dashboard",  icon: "⊞", path: "/" },
   { label: "Statistics", icon: "≡", path: "/statistics" },
-  { label: "Simulate",   icon: "▶", path: "/simulate" },
+  { label: "Sandbox",   icon: "▶", path: "/sandbox" },
   { label: "History",    icon: "◷", path: "/history" },
 ]
 
