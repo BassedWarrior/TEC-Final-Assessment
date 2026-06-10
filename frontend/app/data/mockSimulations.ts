@@ -2,7 +2,7 @@ import { MOCK_BATTERS, MOCK_PITCHERS } from "./mockPlayers"
 import type { Batter, Pitcher } from "./mockPlayers"
 
 
-interface SimulationResult {
+export interface SimulationResult {
   id: number
   date: string
   time: string
