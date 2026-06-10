@@ -590,7 +590,7 @@ export default function Sandbox() {
   const readyToSim = canSimulate()
 
   return (
-    <div style={{ display: "flex", height: "100vh", fontFamily: "'DM Sans', sans-serif", backgroundImage: "url(https://p.potaufeu.asahi.com/9f43-p/picture/30110938/6ff98ecd602934fa9926cbf982a55015.jpg)" }}>
+    <div style={{ display: "flex", height: "100vh", fontFamily: "'DM Sans', sans-serif", backgroundImage: "url(/images/bg-sandbox.jpg)" }}>
       <Sidebar activePath="/sandbox" username="Fausto" />
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>

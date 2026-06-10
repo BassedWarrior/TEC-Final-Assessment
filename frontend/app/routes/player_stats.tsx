@@ -310,7 +310,7 @@ export default function Statistics() {
     : pitchers.filter(p => p.is_new).length
 
   return (
-    <div style={{ display: "flex", height: "100vh", fontFamily: "'DM Sans', sans-serif", backgroundImage: "url(https://assets.goal.com/images/v3/bltc07718a3e3f2f638/Texas_Rangers_vs_Chicago_Cubs_MLB_game.png?auto=webp&format=pjpg&width=3840&quality=60)", backgroundSize: "cover", backgroundPosition: "center-top" }}>
+    <div style={{ display: "flex", height: "100vh", fontFamily: "'DM Sans', sans-serif", backgroundImage: "url(/images/bg-player-stats.jpg)", backgroundSize: "cover", backgroundPosition: "center-top" }}>
       <Sidebar activePath="/statistics" />
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>

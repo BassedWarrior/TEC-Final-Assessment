@@ -143,7 +143,7 @@ export default function History() {
   }
 
   return (
-    <div style={{ display: "flex", height: "100vh", fontFamily: "'DM Sans', sans-serif", backgroundImage: "url(https://pix11.com/wp-content/uploads/sites/25/2026/05/APTOPIX_Yankees_Mets_Baseball_26137758631951.jpg?w=2560&h=1440&crop=1)" }}>
+    <div style={{ display: "flex", height: "100vh", fontFamily: "'DM Sans', sans-serif", backgroundImage: "url(/images/bg-history.jpg)" }}>
       
       <Sidebar activePath="/history"/>
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>

@@ -2,7 +2,7 @@ import { useNavigate } from "react-router"
 import { teamMeta, mockGames, type Game, type InningScore } from "../data/mockData"
 import { useState } from "react"
 import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts"
-import Sidebar from "../../src/components/Sidebar"
+import Sidebar from "../components/Sidebar"
 
 function probFill(p: number) {
   if (p >= 60) return "#16873a"
@@ -197,7 +197,7 @@ export default function Dashboard() {
   const [expandedId, setExpandedId] = useState<number | null>(null)
 
   return (
-    <div style={{ display: "flex", height: "100vh", fontFamily: "'DM Sans', sans-serif", backgroundImage: "url(https://sportshub.cbsistatic.com/i/2026/06/04/142ed39a-4787-4489-bdb4-83b19d3cbdb5/skenes-getty.png)", backgroundSize: "cover", backgroundPosition:"center-top"}}>
+    <div style={{ display: "flex", height: "100vh", fontFamily: "'DM Sans', sans-serif", backgroundImage: "url(/images/bg-dashboard.jpg)", backgroundSize: "cover", backgroundPosition:"center-top"}}>
 
       {/* Sidebar */}
       <Sidebar activePath="/" />

@@ -57,7 +57,7 @@ export default function Login() {
 
       {/* Left panel */}
       <div style={{ flex: "1.1", position: "relative", display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: 48, overflow: "hidden" }}>
-        <div style={{ position: "absolute", inset: 0, backgroundImage: "url('https://d1z5o5vuzqe9y4.cloudfront.net/uploads/Baseball-and-The-Tenth-Inning/Barry-Bonds-connects-June-2001-Brad-Mangin-1.jpg')", backgroundSize: "cover", backgroundPosition: "center top", filter: "brightness(0.7) saturate(0.7)" }} />
+        <div style={{ position: "absolute", inset: 0, backgroundImage: "url(/images/bg-login.jpg)", backgroundSize: "cover", backgroundPosition: "center top", filter: "brightness(0.7) saturate(0.7)" }} />
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(8,12,16,0.97) 0%, rgba(8, 12, 16, 0.11) 60%, transparent 100%)" }} />
         <div style={{ position: "relative", zIndex: 2 }}>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(24, 15, 124, 0.4)", border: "0.5px solid mba_red", borderRadius: 4, padding: "4px 10px", fontSize: 15, fontWeight: 500, color: "white", letterSpacing: ".12em", textTransform: "uppercase", marginBottom: 14 }}>
