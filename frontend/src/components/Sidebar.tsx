@@ -177,7 +177,7 @@ export default function Sidebar({ activePath }: SidebarProps) {
           <div
             style={{
               fontSize: 14,
-              color: "rgba(255,255,255,0.78)",
+              color: "rgba(255,255,255,0.9)",
               letterSpacing: ".12em",
               textTransform: "uppercase",
               padding: "0 8px",
@@ -251,7 +251,7 @@ export default function Sidebar({ activePath }: SidebarProps) {
               style={{
                 padding: "8px 10px",
                 fontSize: 14,
-                color: "rgba(255,255,255,0.5)",
+                color: "rgba(255,255,255,0.8)",
               }}
             >
               Loading...
