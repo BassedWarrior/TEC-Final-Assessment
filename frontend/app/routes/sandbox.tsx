@@ -2,6 +2,12 @@ import { useState, useRef } from "react"
 import { PageLayout, TopBar, SummaryBar } from "../components/Layout";
 import { MOCK_BATTERS, MOCK_PITCHERS } from "../data/mockPlayers"
 import type { Batter, Pitcher } from "../data/mockPlayers"
+import type { Route } from "./+types/sandbox"
+import { requireAuth } from "../utils/auth"
+
+export async function loader({ request }: Route.LoaderArgs) {
+  return await requireAuth(request)
+}
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
