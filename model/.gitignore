@@ -1,0 +1,8 @@
+# Ignore script generated files
+# DataFrame manipulation files
+*.parquet
+# Feature description
+*.csv
+
+# Lineup caches
+data/boxscore_cache/
