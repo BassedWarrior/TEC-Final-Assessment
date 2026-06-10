@@ -167,7 +167,7 @@ export default function History() {
             onChange={e => setSearch(e.target.value)}
             placeholder="Search by date"
             aria-label="Search simulation history"
-            style={{ width: "100%", maxWidth: 400, color: "rgba(255, 255, 255, 0.84)", background: "rgba(255, 255, 255, 0.14)", border: "0.5px solid rgba(255,255,255,0.12)", borderRadius: 6, padding: "8px 14px", fontSize: 15, fontWeight: 600, fontFamily: "'DM Sans', sans-serif", outline: "none" }}
+            style={{ width: "100%", maxWidth: 400, color: "rgba(255, 255, 255, 0.84)", background: "rgba(13, 17, 23, 0.85)", border: "0.5px solid rgba(255,255,255,0.12)", borderRadius: 6, padding: "8px 14px", fontSize: 15, fontWeight: 600, fontFamily: "'DM Sans', sans-serif", outline: "none" }}
           />
         </div>
 
