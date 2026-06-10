@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react"
-import Sidebar from "../../src/components/Sidebar"
-import { MOCK_BATTERS, MOCK_PITCHERS, TEAMS } from "../../src/data/mockPlayers"
-import type { Batter, Pitcher } from "../../src/data/mockPlayers"
+import Sidebar from "../components/Sidebar"
+import { MOCK_BATTERS, MOCK_PITCHERS, TEAMS } from "../data/mockPlayers"
+import type { Batter, Pitcher } from "../data/mockPlayers"
 
 type Tab = "batter" | "pitcher"
 type SortKey = "name" | "pa" | "avg" | "obp" | "slg" | "iso" | "k_rate" | "bb_rate" | "status" | "stand"

@@ -1,7 +1,7 @@
 import { useState, useRef } from "react"
-import Sidebar from "../../src/components/Sidebar"
-import { MOCK_BATTERS, MOCK_PITCHERS } from "../../src/data/mockPlayers"
-import type { Batter, Pitcher } from "../../src/data/mockPlayers"
+import Sidebar from "../components/Sidebar"
+import { MOCK_BATTERS, MOCK_PITCHERS } from "../data/mockPlayers"
+import type { Batter, Pitcher } from "../data/mockPlayers"
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

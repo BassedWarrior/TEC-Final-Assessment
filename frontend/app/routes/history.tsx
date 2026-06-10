@@ -1,7 +1,7 @@
 import { useState } from "react"
-import Sidebar from "../../src/components/Sidebar"
-import type { Batter, Pitcher } from "../../src/data/mockPlayers"
-import { MOCK_HISTORY } from "../../src/data/mockSimulations"
+import Sidebar from "../components/Sidebar"
+import type { Batter, Pitcher } from "../data/mockPlayers"
+import { MOCK_HISTORY } from "../data/mockSimulations"
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
