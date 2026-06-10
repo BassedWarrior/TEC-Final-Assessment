@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react"
-import Sidebar from "../components/Sidebar"
+import { PageLayout, TopBar, SummaryBar } from "../components/Layout"
 import { MOCK_BATTERS, MOCK_PITCHERS, TEAMS } from "../data/mockPlayers"
 import type { Batter, Pitcher } from "../data/mockPlayers"
 
@@ -310,22 +310,8 @@ export default function Statistics() {
     : pitchers.filter(p => p.is_new).length
 
   return (
-    <div style={{ display: "flex", height: "100vh", fontFamily: "'DM Sans', sans-serif", backgroundImage: "url(/images/bg-player-stats.jpg)", backgroundSize: "cover", backgroundPosition: "center-top" }}>
-      <Sidebar activePath="/statistics" />
-
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-
-        {/* Topbar */}
-        <div style={{ padding: "18px 24px", borderBottom: "0.5px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-          <div>
-            <div style={{ fontSize: 18, fontWeight: 600,color: "rgb(255, 255, 255)", letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 3 }}>MLB · 2025</div>
-            <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 40, fontWeight: 700, color: "#f0ede6" }}>Player Statistics</h1>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(13, 17, 23, 0.63)", border: "0.5px solid rgba(255, 255, 255, 0.23)", borderRadius: 6, padding: "7px 12px", fontSize: 14, color: "rgb(255, 255, 255)" }}>
-            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "rgb(96, 255, 16)" }} />
-            2025 Season
-          </div>
-        </div>
+    <PageLayout activePath="/statistics" backgroundImage="/images/bg-player-stats.jpg">
+      <TopBar title = "Player Statistics" />
 
         {/* Controls */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 24px", borderBottom: "0.5px solid rgba(255,255,255,0.06)", flexShrink: 0, flexWrap: "wrap" }}>
@@ -640,23 +626,13 @@ export default function Statistics() {
           <DetailPanel player={selected} tab={tab} onClose={() => setSelected(null)} />
         </div>
 
-        {/* Summary bar */}
-        <div style={{ display: "flex", background: "rgba(3, 3, 30, 0.33)", borderTop: "0.5px solid rgba(255, 255, 255, 0.29)", flexShrink: 0 }}>
-          {[
-            [String(currentData.length), "Players shown"],
-            [fmt(avgMean), isPitcher ? "Avg AVG allowed" : "Avg batting avg"],
-            [String(rookieCount), isPitcher ? "New pitchers" : "Rookies"],
-            [currentData.length > 0 ? `${Math.max(...currentData.map(p => p.k_rate))}%` : "—", "Top K rate"],
-          ].map(([val, lbl], i, arr) => (
-            <div key={lbl} style={{ flex: 1, padding: "13px 20px", borderRight: i < arr.length - 1 ? "0.5px solid rgba(255, 255, 255, 0.34)" : "none" }}>
-              <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, fontWeight: 800, color: "white" }}>{val}</div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: "rgba(255, 255, 255, 0.9)", textTransform: "uppercase", letterSpacing: ".07em" }}>{lbl}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" />
-    </div>
+      {/* Summary bar */}
+      <SummaryBar items={[
+          { label: "Players shown", value: String(currentData.length) },
+          { label: isPitcher ? "Avg AVG allowed" : "Avg batting avg", value: fmt(avgMean) },
+          { label: isPitcher ? "New pitchers" : "Rookies", value: String(rookieCount) },
+          { label: "Top K rate", value: currentData.length > 0 ? `${Math.max(...currentData.map(p => p.k_rate))}%` : "—" },
+      ]} />
+    </PageLayout>
   )
 }

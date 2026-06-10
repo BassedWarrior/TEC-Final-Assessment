@@ -2,7 +2,7 @@ import { useNavigate } from "react-router"
 import { teamMeta, mockGames, type Game, type InningScore } from "../data/mockData"
 import { useState } from "react"
 import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts"
-import Sidebar from "../components/Sidebar"
+import { PageLayout, TopBar, SummaryBar } from "../components/Layout";
 
 function probFill(p: number) {
   if (p >= 60) return "#16873a"
@@ -196,25 +196,18 @@ export default function Dashboard() {
   const sorted = [...mockGames].sort((a, b) => b.prob1 - a.prob1)
   const [expandedId, setExpandedId] = useState<number | null>(null)
 
+  const summaryItems = [
+    { label: "Games this week", value: "6" },
+    { label: "Top confidence", value: "62%" },
+    { label: "Model accuracy", value: "~65%" },
+    { label: "Games analyzed", value: "2,430" },
+  ];
+
   return (
-    <div style={{ display: "flex", height: "100vh", fontFamily: "'DM Sans', sans-serif", backgroundImage: "url(/images/bg-dashboard.jpg)", backgroundSize: "cover", backgroundPosition:"center-top"}}>
+    <PageLayout activePath="/" backgroundImage="/images/bg-dashboard.jpg">
+      <TopBar title = "This week's predictions" />
 
-      {/* Sidebar */}
-      <Sidebar activePath="/" />
-
-      {/* Main */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        <div style={{ padding: "20px 28px", borderBottom: "0.5px solid rgba(255,255,255,0.31)", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-          <div>
-            <div style={{ fontSize: 18, color: "rgba(255, 255, 255, 0.63)", letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 3 }}>MLB · 2025</div>
-            <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 35, fontWeight: 700, color: "#f0ede6" }}>This week's predictions</h1>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)", borderRadius: 6, padding: "7px 12px", fontSize: 18, color: "rgba(255, 255, 255, 0.85)", fontWeight: 500}}>
-            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#2ecc71" }} aria-hidden="true" />
-            May 24 – 30, 2025
-          </div>
-        </div>
-
+        {/* Table */}
         <div style={{ flex: 1, overflowY: "auto", padding: "20px 28px" }}>
           <div style={{ background: "rgba(42, 42, 44, 0.69)", borderRadius: 10, border: "0.5px solid rgba(255,255,255,0.07)", overflow: "hidden" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }} aria-label="Game predictions">
@@ -262,18 +255,8 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Summary bar */}
-        <div style={{ display: "flex", borderTop: "0.5px solid rgba(255,255,255,0.06)", flexShrink: 0 }}>
-          {[["6", "Games this week"], ["62%", "Top confidence"], ["~65%", "Model accuracy"], ["2,430", "Games analyzed"]].map(([val, lbl], i, arr) => (
-            <div key={lbl} style={{ flex: 1, padding: "14px 20px", borderRight: i < arr.length - 1 ? "0.5px solid rgba(255,255,255,0.06)" : "none" }}>
-              <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 28, fontWeight: 900, color: "white" }}>{val}</div>
-              <div style={{ fontSize: 16, color: "rgb(255, 255, 255)", textTransform: "uppercase", letterSpacing: ".07em", fontWeight: 900}}>{lbl}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" />
-    </div>
+      {/* Summary bar */}
+      <SummaryBar items={summaryItems} />
+    </PageLayout>
   )
 }
