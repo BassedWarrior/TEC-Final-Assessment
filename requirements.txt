@@ -36,3 +36,8 @@ tqdm==4.68.2
 typing_extensions==4.15.0
 tzdata==2026.2
 urllib3==2.7.0
+fastapi[standard]
+uvicorn[standard]
+lightgbm
+numpy
+pandas

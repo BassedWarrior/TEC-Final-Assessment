@@ -1,5 +1,0 @@
-fastapi[standard]
-  uvicorn[standard]
-  lightgbm
-  numpy
-  pandas
