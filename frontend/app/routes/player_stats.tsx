@@ -321,7 +321,7 @@ export default function Statistics() {
             <div style={{ fontSize: 18, fontWeight: 600,color: "rgb(255, 255, 255)", letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 3 }}>MLB · 2025</div>
             <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 40, fontWeight: 700, color: "#f0ede6" }}>Player Statistics</h1>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255, 255, 255, 0.12)", border: "0.5px solid rgba(255, 255, 255, 0.23)", borderRadius: 6, padding: "7px 12px", fontSize: 14, color: "rgb(255, 255, 255)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(13, 17, 23, 0.63)", border: "0.5px solid rgba(255, 255, 255, 0.23)", borderRadius: 6, padding: "7px 12px", fontSize: 14, color: "rgb(255, 255, 255)" }}>
             <div style={{ width: 6, height: 6, borderRadius: "50%", background: "rgb(96, 255, 16)" }} />
             2025 Season
           </div>
@@ -332,7 +332,7 @@ export default function Statistics() {
           <div style={{ display: "flex", gap: 3, background: "rgba(255,255,255,0.04)", borderRadius: 6, padding: 3 }}>
             {(["batter", "pitcher"] as Tab[]).map(t => (
               <button key={t} onClick={() => setTab(t)}
-                style={{ padding: "5px 14px", borderRadius: 4, fontSize: 16, fontWeight: 600, border: "0.5px solid rgba(255, 255, 255, 0.42)", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "all .15s", background: tab === t ? "rgba(192,30,46,0.2)" : "transparent", color: tab === t ? "#f07080" : "rgba(255, 255, 255, 0.84)" }}>
+                style={{ padding: "5px 14px", borderRadius: 4, fontSize: 16, fontWeight: 600, border: "0.5px solid rgba(255, 255, 255, 0.42)", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "all .15s", background: tab === t ? "rgba(192,30,46,0.63)" : "rgba(13, 17, 23, 0.63)", color: tab === t ? "rgba(255, 255, 255, 0.84)" : "rgba(255, 255, 255, 0.84)" }}>
                 {t === "batter" ? "Batters" : "Pitchers"}
               </button>
             ))}
@@ -341,15 +341,15 @@ export default function Statistics() {
             <input value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Search player or team..."
               aria-label="Search players"
-              style={{ width: "100%", color: "rgb(255, 255, 255)", background: "rgba(35, 5, 5, 0.13)", border: "0.5px solid rgba(255, 255, 255, 0.43)", borderRadius: 6, padding: "8px 12px", fontSize: 15, fontFamily: "'DM Sans', sans-serif", fontWeight: 600, outline: "none" }} />
+              style={{ width: "100%", color: "rgba(255, 255, 255, 0.84)", background: "rgba(13, 17, 23, 0.63)", border: "0.5px solid rgba(255, 255, 255, 0.43)", borderRadius: 6, padding: "8px 12px", fontSize: 15, fontFamily: "'DM Sans', sans-serif", fontWeight: 600, outline: "none" }} />
           </div>
           <select value={teamFilter} onChange={e => setTeamFilter(e.target.value)} aria-label="Filter by team"
-            style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "8px 10px", fontSize: 14, color: "rgb(255, 255, 255)", fontFamily: "'DM Sans', sans-serif", outline: "none", cursor: "pointer" }}>
+            style={{ background: "rgba(13, 17, 23, 0.63)", border: "0.5px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "8px 10px", fontSize: 14, color: "rgba(255, 255, 255, 0.84)", fontFamily: "'DM Sans', sans-serif", outline: "none", cursor: "pointer" }}>
             <option value="">All teams</option>
             {TEAMS.map(t => <option key={t}>{t}</option>)}
           </select>
           <select value={rookieFilter} onChange={e => setRookieFilter(e.target.value)} aria-label="Filter by experience"
-            style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "8px 10px", fontSize: 14, color: "rgb(255, 255, 255)", fontFamily: "'DM Sans', sans-serif", outline: "none", cursor: "pointer" }}>
+            style={{ background: "rgba(13, 17, 23, 0.63)", border: "0.5px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "8px 10px", fontSize: 14, color: "rgba(255, 255, 255, 0.84)", fontFamily: "'DM Sans', sans-serif", outline: "none", cursor: "pointer" }}>
             <option value="">All players</option>
             <option value="rookie">Rookies only</option>
             <option value="vet">Veterans only</option>
