@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react"
-import Sidebar from "../../src/components/Sidebar"
-import { MOCK_BATTERS, MOCK_PITCHERS, TEAMS } from "../../src/data/mockPlayers"
-import type { Batter, Pitcher } from "../../src/data/mockPlayers"
+import { PageLayout, TopBar, SummaryBar } from "../components/Layout"
+import { MOCK_BATTERS, MOCK_PITCHERS, TEAMS } from "../data/mockPlayers"
+import type { Batter, Pitcher } from "../data/mockPlayers"
 
 type Tab = "batter" | "pitcher"
 type SortKey = "name" | "pa" | "avg" | "obp" | "slg" | "iso" | "k_rate" | "bb_rate" | "status" | "stand"
@@ -310,29 +310,15 @@ export default function Statistics() {
     : pitchers.filter(p => p.is_new).length
 
   return (
-    <div style={{ display: "flex", height: "100vh", fontFamily: "'DM Sans', sans-serif", backgroundImage: "url(https://assets.goal.com/images/v3/bltc07718a3e3f2f638/Texas_Rangers_vs_Chicago_Cubs_MLB_game.png?auto=webp&format=pjpg&width=3840&quality=60)", backgroundSize: "cover", backgroundPosition: "center-top" }}>
-      <Sidebar activePath="/statistics" />
-
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-
-        {/* Topbar */}
-        <div style={{ padding: "18px 24px", borderBottom: "0.5px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-          <div>
-            <div style={{ fontSize: 18, fontWeight: 600,color: "rgb(255, 255, 255)", letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 3 }}>MLB · 2025</div>
-            <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 40, fontWeight: 700, color: "#f0ede6" }}>Player Statistics</h1>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255, 255, 255, 0.12)", border: "0.5px solid rgba(255, 255, 255, 0.23)", borderRadius: 6, padding: "7px 12px", fontSize: 14, color: "rgb(255, 255, 255)" }}>
-            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "rgb(96, 255, 16)" }} />
-            2025 Season
-          </div>
-        </div>
+    <PageLayout activePath="/statistics" backgroundImage="/images/bg-player-stats.jpg">
+      <TopBar title = "Player Statistics" />
 
         {/* Controls */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 24px", borderBottom: "0.5px solid rgba(255,255,255,0.06)", flexShrink: 0, flexWrap: "wrap" }}>
           <div style={{ display: "flex", gap: 3, background: "rgba(255,255,255,0.04)", borderRadius: 6, padding: 3 }}>
             {(["batter", "pitcher"] as Tab[]).map(t => (
               <button key={t} onClick={() => setTab(t)}
-                style={{ padding: "5px 14px", borderRadius: 4, fontSize: 16, fontWeight: 600, border: "0.5px solid rgba(255, 255, 255, 0.42)", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "all .15s", background: tab === t ? "rgba(192,30,46,0.2)" : "transparent", color: tab === t ? "#f07080" : "rgba(255, 255, 255, 0.84)" }}>
+                style={{ padding: "5px 14px", borderRadius: 4, fontSize: 16, fontWeight: 600, border: "0.5px solid rgba(255, 255, 255, 0.42)", cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "all .15s", background: tab === t ? "rgba(192,30,46,0.63)" : "rgba(13, 17, 23, 0.63)", color: tab === t ? "rgba(255, 255, 255, 0.84)" : "rgba(255, 255, 255, 0.84)" }}>
                 {t === "batter" ? "Batters" : "Pitchers"}
               </button>
             ))}
@@ -341,15 +327,15 @@ export default function Statistics() {
             <input value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Search player or team..."
               aria-label="Search players"
-              style={{ width: "100%", color: "rgb(255, 255, 255)", background: "rgba(35, 5, 5, 0.13)", border: "0.5px solid rgba(255, 255, 255, 0.43)", borderRadius: 6, padding: "8px 12px", fontSize: 15, fontFamily: "'DM Sans', sans-serif", fontWeight: 600, outline: "none" }} />
+              style={{ width: "100%", color: "rgba(255, 255, 255, 0.84)", background: "rgba(13, 17, 23, 0.63)", border: "0.5px solid rgba(255, 255, 255, 0.43)", borderRadius: 6, padding: "8px 12px", fontSize: 15, fontFamily: "'DM Sans', sans-serif", fontWeight: 600, outline: "none" }} />
           </div>
           <select value={teamFilter} onChange={e => setTeamFilter(e.target.value)} aria-label="Filter by team"
-            style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "8px 10px", fontSize: 14, color: "rgb(255, 255, 255)", fontFamily: "'DM Sans', sans-serif", outline: "none", cursor: "pointer" }}>
+            style={{ background: "rgba(13, 17, 23, 0.63)", border: "0.5px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "8px 10px", fontSize: 14, color: "rgba(255, 255, 255, 0.84)", fontFamily: "'DM Sans', sans-serif", outline: "none", cursor: "pointer" }}>
             <option value="">All teams</option>
             {TEAMS.map(t => <option key={t}>{t}</option>)}
           </select>
           <select value={rookieFilter} onChange={e => setRookieFilter(e.target.value)} aria-label="Filter by experience"
-            style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "8px 10px", fontSize: 14, color: "rgb(255, 255, 255)", fontFamily: "'DM Sans', sans-serif", outline: "none", cursor: "pointer" }}>
+            style={{ background: "rgba(13, 17, 23, 0.63)", border: "0.5px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "8px 10px", fontSize: 14, color: "rgba(255, 255, 255, 0.84)", fontFamily: "'DM Sans', sans-serif", outline: "none", cursor: "pointer" }}>
             <option value="">All players</option>
             <option value="rookie">Rookies only</option>
             <option value="vet">Veterans only</option>
@@ -363,16 +349,216 @@ export default function Statistics() {
               <table style={{ width: "100%", borderCollapse: "collapse" }} aria-label="Player statistics">
                 <thead>
                   <tr style={{ background: "rgba(255,255,255,0.02)", borderBottom: "0.5px solid rgba(255,255,255,0.07)" }}>
-                    <th style={thStyle("name")} onClick={() => handleSort("name")}>Player <SortIcon active={sortKey === "name"} dir={sortDir} /></th>
-                    <th style={thStyle("pa")} onClick={() => handleSort("pa")}>PA <SortIcon active={sortKey === "pa"} dir={sortDir} /></th>
-                    <th style={thStyle("avg")} onClick={() => handleSort("avg")}>{isPitcher ? "AVG Allowed" : "AVG"} <SortIcon active={sortKey === "avg"} dir={sortDir} /></th>
-                    <th style={thStyle("obp")} onClick={() => handleSort("obp")}>{isPitcher ? "OBP Allowed" : "OBP"} <SortIcon active={sortKey === "obp"} dir={sortDir} /></th>
-                    <th style={thStyle("slg")} onClick={() => handleSort("slg")}>{isPitcher ? "SLG Allowed" : "SLG"} <SortIcon active={sortKey === "slg"} dir={sortDir} /></th>
-                    <th style={thStyle("iso")} onClick={() => handleSort("iso")}>ISO <SortIcon active={sortKey === "iso"} dir={sortDir} /></th>
-                    <th style={thStyle("k_rate")} onClick={() => handleSort("k_rate")}>K% <SortIcon active={sortKey === "k_rate"} dir={sortDir} /></th>
-                    <th style={thStyle("bb_rate")} onClick={() => handleSort("bb_rate")}>BB% <SortIcon active={sortKey === "bb_rate"} dir={sortDir} /></th>
-                    <th style={thStyle("stand")} onClick={() => handleSort("stand")}>{isPitcher ? "Throws" : "Stand"} <SortIcon active={sortKey === "stand"} dir={sortDir} /></th>
-                    <th style={thStyle("status")} onClick={() => handleSort("status")}>Status <SortIcon active={sortKey === "status"} dir={sortDir} /></th>
+                    <th style={{ ...thStyle("name"), padding: 0 }}>
+                      <button
+                        onClick={() => handleSort("name")}
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          padding: "11px 14px",
+                          background: "transparent",
+                          border: "none",
+                          fontSize: "inherit",
+                          fontWeight: "inherit",
+                          color: "inherit",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        Player <SortIcon active={sortKey === "name"} dir={sortDir} />
+                      </button>
+                    </th>
+                    <th style={{ ...thStyle("pa"), padding: 0 }}>
+                      <button
+                        onClick={() => handleSort("pa")}
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          padding: "11px 14px",
+                          background: "transparent",
+                          border: "none",
+                          fontSize: "inherit",
+                          fontWeight: "inherit",
+                          color: "inherit",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        PA <SortIcon active={sortKey === "pa"} dir={sortDir} />
+                      </button>
+                    </th>
+                    <th style={{ ...thStyle("avg"), padding: 0 }}>
+                      <button
+                        onClick={() => handleSort("avg")}
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          padding: "11px 14px",
+                          background: "transparent",
+                          border: "none",
+                          fontSize: "inherit",
+                          fontWeight: "inherit",
+                          color: "inherit",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        {isPitcher ? "AVG Allowed" : "AVG"} <SortIcon active={sortKey === "avg"} dir={sortDir} />
+                      </button>
+                    </th>
+                    <th style={{ ...thStyle("obp"), padding: 0 }}>
+                      <button
+                        onClick={() => handleSort("obp")}
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          padding: "11px 14px",
+                          background: "transparent",
+                          border: "none",
+                          fontSize: "inherit",
+                          fontWeight: "inherit",
+                          color: "inherit",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        {isPitcher ? "OBP Allowed" : "OBP"} <SortIcon active={sortKey === "obp"} dir={sortDir} />
+                      </button>
+                    </th>
+                    <th style={{ ...thStyle("slg"), padding: 0 }}>
+                      <button
+                        onClick={() => handleSort("slg")}
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          padding: "11px 14px",
+                          background: "transparent",
+                          border: "none",
+                          fontSize: "inherit",
+                          fontWeight: "inherit",
+                          color: "inherit",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        {isPitcher ? "SLG Allowed" : "SLG"} <SortIcon active={sortKey === "slg"} dir={sortDir} />
+                      </button>
+                    </th>
+                    <th style={{ ...thStyle("iso"), padding: 0 }}>
+                      <button
+                        onClick={() => handleSort("iso")}
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          padding: "11px 14px",
+                          background: "transparent",
+                          border: "none",
+                          fontSize: "inherit",
+                          fontWeight: "inherit",
+                          color: "inherit",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        ISO <SortIcon active={sortKey === "iso"} dir={sortDir} />
+                      </button>
+                    </th>
+                    <th style={{ ...thStyle("k_rate"), padding: 0 }}>
+                      <button
+                        onClick={() => handleSort("k_rate")}
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          padding: "11px 14px",
+                          background: "transparent",
+                          border: "none",
+                          fontSize: "inherit",
+                          fontWeight: "inherit",
+                          color: "inherit",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        K% <SortIcon active={sortKey === "k_rate"} dir={sortDir} />
+                      </button>
+                    </th>
+                    <th style={{ ...thStyle("bb_rate"), padding: 0 }}>
+                      <button
+                        onClick={() => handleSort("bb_rate")}
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          padding: "11px 14px",
+                          background: "transparent",
+                          border: "none",
+                          fontSize: "inherit",
+                          fontWeight: "inherit",
+                          color: "inherit",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        BB% <SortIcon active={sortKey === "bb_rate"} dir={sortDir} />
+                      </button>
+                    </th>
+                    <th style={{ ...thStyle("stand"), padding: 0 }}>
+                      <button
+                        onClick={() => handleSort("stand")}
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          padding: "11px 14px",
+                          background: "transparent",
+                          border: "none",
+                          fontSize: "inherit",
+                          fontWeight: "inherit",
+                          color: "inherit",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        {isPitcher ? "Throws" : "Stand"} <SortIcon active={sortKey === "stand"} dir={sortDir} />
+                      </button>
+                    </th>
+                    <th style={{ ...thStyle("status"), padding: 0 }}>
+                      <button
+                        onClick={() => handleSort("status")}
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          padding: "11px 14px",
+                          background: "transparent",
+                          border: "none",
+                          fontSize: "inherit",
+                          fontWeight: "inherit",
+                          color: "inherit",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        Status <SortIcon active={sortKey === "status"} dir={sortDir} />
+                      </button>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -390,6 +576,16 @@ export default function Statistics() {
                     return (
                       <tr key={player.id}
                         onClick={() => setSelected(isSelected ? null : player)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " " ) {
+                            e.preventDefault();
+                            setSelected(isSelected ? null : player);
+                          }
+                        }}
+                        tabIndex={0}
+                        role="button"
+                        aria-pressed={isSelected}
+                        aria-label={ `View details for ${player.name}` }
                         style={{ borderBottom: "0.5px solid rgba(255,255,255,0.04)", cursor: "pointer", background: isSelected ? "rgba(204, 190, 192, 0.3)" : "transparent", transition: "background .12s" }}>
                         <td style={tdStyle}>
                           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -430,23 +626,13 @@ export default function Statistics() {
           <DetailPanel player={selected} tab={tab} onClose={() => setSelected(null)} />
         </div>
 
-        {/* Summary bar */}
-        <div style={{ display: "flex", background: "rgba(3, 3, 30, 0.33)", borderTop: "0.5px solid rgba(255, 255, 255, 0.29)", flexShrink: 0 }}>
-          {[
-            [String(currentData.length), "Players shown"],
-            [fmt(avgMean), isPitcher ? "Avg AVG allowed" : "Avg batting avg"],
-            [String(rookieCount), isPitcher ? "New pitchers" : "Rookies"],
-            [currentData.length > 0 ? `${Math.max(...currentData.map(p => p.k_rate))}%` : "—", "Top K rate"],
-          ].map(([val, lbl], i, arr) => (
-            <div key={lbl} style={{ flex: 1, padding: "13px 20px", borderRight: i < arr.length - 1 ? "0.5px solid rgba(255, 255, 255, 0.34)" : "none" }}>
-              <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, fontWeight: 800, color: "white" }}>{val}</div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: "rgba(255, 255, 255, 0.9)", textTransform: "uppercase", letterSpacing: ".07em" }}>{lbl}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" />
-    </div>
+      {/* Summary bar */}
+      <SummaryBar items={[
+          { label: "Players shown", value: String(currentData.length) },
+          { label: isPitcher ? "Avg AVG allowed" : "Avg batting avg", value: fmt(avgMean) },
+          { label: isPitcher ? "New pitchers" : "Rookies", value: String(rookieCount) },
+          { label: "Top K rate", value: currentData.length > 0 ? `${Math.max(...currentData.map(p => p.k_rate))}%` : "—" },
+      ]} />
+    </PageLayout>
   )
 }

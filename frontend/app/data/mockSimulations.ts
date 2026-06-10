@@ -1,5 +1,5 @@
-import { MOCK_BATTERS, MOCK_PITCHERS } from "../../src/data/mockPlayers"
-import type { Batter, Pitcher } from "../../src/data/mockPlayers"
+import { MOCK_BATTERS, MOCK_PITCHERS } from "./mockPlayers"
+import type { Batter, Pitcher } from "./mockPlayers"
 
 
 interface SimulationResult {
