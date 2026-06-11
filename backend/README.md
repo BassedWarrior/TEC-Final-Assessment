@@ -109,27 +109,36 @@ ACCESS_TOKEN_EXPIRE_MINUTES=30
 backend/
 ├── app/
 │   ├── __init__.py
-│   ├── main.py                 # FastAPI app
-│   ├── config.py               # Loads .env
+│   ├── main.py                 # FastAPI app, CORS, router registration
+│   ├── config.py               # Loads .env settings
 │   ├── db/
 │   │   ├── __init__.py
 │   │   ├── base.py             # SQLAlchemy async engine + Base
-│   │   └── session.py          # get_db() dependency
-│   ├── models/
+│   │   ├── session.py          # get_db() dependency
+│   │   └── scripts/
+│   │       ├── __init__.py
+│   │       ├── init_db.py      # One-time script to create tables
+│   │       ├── seed_players.py # Seeds player data from MLB API
+│   │       └── requirements.txt
+│   ├── models/ # This can change in the future
 │   │   ├── __init__.py
-│   │   └── user.py             # User SQLAlchemy model
-│   ├── api/
+│   │   ├── user.py             # User ORM model
+│   │   ├── player.py           # Player ORM model
+│   │   ├── match.py            # Match ORM model
+│   │   ├── simulation.py       # Simulation ORM model (aggregated stats)
+│   │   └── inning.py           # Inning ORM model (per-inning breakdown)
+│   ├── routes/
 │   │   ├── __init__.py
-│   │   └── auth.py             # /auth/register, /auth/login, /auth/me
-│   └── core/
+│   │   ├── auth.py             # /auth/register, /auth/login, /auth/logout, /auth/me
+│   │   └── simulations.py      # /simulations/simulate (proxies to model API)
+│   └── utils/
 │       ├── __init__.py
-│       ├── security.py         # password hashing, JWT create
-│       └── dependencies.py     # get_current_user
-├── init_db.py                  # One‑time script to create tables
-├── requirements.txt            # Dependencies
-├── .gitignore                  # Ignore `.env` file, for example
-├── .env                        # Environment Variable Secrets
-├── .env.example                # Example File
+│       ├── security.py         # Password hashing, JWT creation
+│       └── dependencies.py     # get_current_user dependency
+├── requirements.txt            # Python dependencies
+├── .gitignore
+├── .env                        # Environment variable secrets (not committed)
+├── .env.example                # Example env file
 └── README.md
 ```
 
@@ -168,6 +177,16 @@ python init_db.py
 This script connects to the database using the `DATABASE_URL` from `.env` and
 creates the `users` table (and any other models you add later). It will not
 drop existing tables – only create missing ones.
+
+### 3. Seed the database tables
+
+Run the seeding script:
+```bash
+python seed_players.py
+```
+
+This script consults the MLB official API and fills the database with the necessary player data so it can be displayed in the frontend, 
+and used to send prediction requests to the model.
 
 ### 3. Start the FastAPI server
 
