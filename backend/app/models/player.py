@@ -8,7 +8,7 @@ class Player(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, nullable=False)
     hand = Column(String(1), nullable=False)  # L, R, or S
-    pa = Column(Float, nullable=False)
+    pa_count = Column(Float, nullable=False)
     avg = Column(Float, nullable=False)
     obp = Column(Float, nullable=False)
     slg = Column(Float, nullable=False)

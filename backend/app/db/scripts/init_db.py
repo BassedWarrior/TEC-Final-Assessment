@@ -7,6 +7,11 @@ Creates all tables defined in SQLAlchemy models if they don't already exist.
 """
 
 import asyncio
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))  # adds backend/ to path
+
 from app.db.base import engine, Base
 
 # Import all models so Base knows about them

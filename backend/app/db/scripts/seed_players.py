@@ -9,6 +9,7 @@ import asyncio
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))  # adds backend/ to path
 # Make mlb_stats importable (backend/app/db/scripts/ -> repo root -> model/download_data/)
 sys.path.insert(0, str(Path(__file__).resolve().parents[4] / "model" / "download_data"))
 import mlb_stats
@@ -58,7 +59,7 @@ async def seed():
             id=int(mlb_id),
             name=batter_names.get(mlb_id, str(mlb_id)),
             hand=hands.get(mlb_id, {}).get("bat", "R"),
-            pa=float(row["pa_count"]),
+            pa_count=float(row["pa_count"]),
             avg=row["avg"], obp=row["obp"], slg=row["slg"], iso=row["iso"],
             k_rate=row["k_rate"], bb_rate=row["bb_rate"], hr_rate=row["hr_rate"],
             is_rookie="1" if is_rookie else "0",
@@ -73,7 +74,7 @@ async def seed():
             id=int(mlb_id),
             name=pitcher_names.get(mlb_id, str(mlb_id)),
             hand=hands.get(mlb_id, {}).get("throw", "R"),
-            pa=float(row["pa_count"]),
+            pa_count=float(row["pa_count"]),
             avg=row["avg"], obp=row["obp"], slg=row["slg"], iso=row["iso"],
             k_rate=row["k_rate"], bb_rate=row["bb_rate"], hr_rate=row["hr_rate"],
             is_rookie="1" if is_rookie else "0",
