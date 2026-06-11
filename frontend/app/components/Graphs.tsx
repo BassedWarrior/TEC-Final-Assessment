@@ -1,17 +1,16 @@
-// Graph.tsx
 import { teamMeta, mockGames, type Game, type InningScore } from "../data/mockData"
 import { useState } from "react"
 import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts"
 
 type StatMode = "score" | "hits" | "hrs" | "ks"
 
-export default function Graph({ 
-  game, 
-  backgroundColor, 
+export default function Graph({
+  game,
+  backgroundColor,
   fullWidth = false,
   isEmbedded = false  // New prop to detect if it's embedded in a table
-}: { 
-  game: Game; 
+}: {
+  game: Game;
   backgroundColor?: string;
   fullWidth?: boolean;
   isEmbedded?: boolean;
@@ -83,10 +82,10 @@ export default function Graph({
     return (
       <tr>
         <td colSpan={8} style={{ padding: "0 14px 20px 14px", background: "rgba(0,0,0,0.2)" }}>
-          <div style={{ 
-            background: backgroundColor || "rgba(13, 17, 23, 0.85)", 
-            border: "0.5px solid rgba(255,255,255,0.08)", 
-            borderRadius: 8, 
+          <div style={{
+            background: backgroundColor || "rgba(13, 17, 23, 0.85)",
+            border: "0.5px solid rgba(255,255,255,0.08)",
+            borderRadius: 8,
             padding: "16px 20px",
           }}>
             {/* Simplified layout for embedded view */}
@@ -101,7 +100,7 @@ export default function Graph({
                 <StatPill label="K's" v1={game.strikeouts[0]} v2={game.strikeouts[1]} stat="ks" />
               </div>
             </div>
-            
+
             <div>
               <div style={{ fontSize: 13, fontWeight: 600, color: "white", letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 12 }}>
                 {chartLabel[mode]}
@@ -128,18 +127,18 @@ export default function Graph({
 
   // Full version (for sandbox page)
   return (
-    <div style={{ 
+    <div style={{
       width: fullWidth ? "100%" : "auto",
-      background: backgroundColor || "rgba(152, 152, 152, 0.13)", 
-      border: "0.5px solid rgba(255,255,255,0.08)", 
-      borderRadius: 8, 
-      padding: "20px 24px", 
-      display: "flex", 
+      background: backgroundColor || "rgba(152, 152, 152, 0.13)",
+      border: "0.5px solid rgba(255,255,255,0.08)",
+      borderRadius: 8,
+      padding: "20px 24px",
+      display: "flex",
       gap: 32,
       flexWrap: "wrap",
     }}>
       {/* Left: stats */}
-      <div style={{ 
+      <div style={{
         flex: fullWidth ? "0 0 auto" : "0 0 420px",
         width: fullWidth ? "auto" : 420,
         minWidth: fullWidth ? 300 : 420,
@@ -179,7 +178,7 @@ export default function Graph({
       </div>
 
       {/* Right: chart */}
-      <div style={{ 
+      <div style={{
         flex: fullWidth ? 1 : "0 1 600px",
         minWidth: fullWidth ? 300 : 600,
         borderRadius: 10,
