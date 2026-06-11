@@ -2,18 +2,15 @@
 Seed the `players` table from official MLB stats (statsapi.mlb.com).
 
 Usage (from the backend/ directory):
-    python seed_players.py [season]   # season defaults to 2024
-
-Requires the model/download_data/ scripts to be importable and the backend
-.env to be present (DATABASE_URL).
+    python -m app.db.scripts.seed_players [season]   # season defaults to 2024
 """
 
 import asyncio
 import sys
 from pathlib import Path
 
-# Make mlb_stats importable
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "model" / "download_data"))
+# Make mlb_stats importable (backend/app/db/scripts/ -> repo root -> model/download_data/)
+sys.path.insert(0, str(Path(__file__).resolve().parents[4] / "model" / "download_data"))
 import mlb_stats
 
 from dotenv import load_dotenv
@@ -33,7 +30,6 @@ MIN_PA_PITCHER = 50
 
 
 def _names_from_splits(group: str, season: int) -> dict:
-    """Return {mlbam_id: fullName} from the cached splits."""
     return {
         s["player"]["id"]: s["player"].get("fullName", str(s["player"]["id"]))
         for s in mlb_stats._fetch_season_splits(group, season)
@@ -69,7 +65,7 @@ async def seed():
         ))
 
     for mlb_id, row in pitchers.iterrows():
-        if int(mlb_id) in seen_ids:  # skip two-way players already added as batters
+        if int(mlb_id) in seen_ids:
             continue
         is_rookie = row["pa_count"] < MIN_PA_PITCHER
         players.append(Player(
@@ -83,7 +79,6 @@ async def seed():
         ))
 
     async with AsyncSessionLocal() as db:
-        # Upsert: skip conflicts on primary key
         await db.execute(text("TRUNCATE TABLE players RESTART IDENTITY CASCADE"))
         db.add_all(players)
         await db.commit()
