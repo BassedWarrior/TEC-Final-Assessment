@@ -1,40 +1,40 @@
 """
 Simulation endpoints.
 
-For now this simply forwards lineup stat arrays to the MLB model API
-(`POST /simulate`) and returns its response. Later the stat arrays will be
-built from the database instead of being received in the request body.
+The endpoint receives player *ids* for both lineups. A middleware service
+(`app.services.lineups`) relates each id to its stat line stored in the
+'players' table and rebuilds the stat arrays the model API expects, then the
+assembled payload is forwarded to the MLB model API (`POST /simulate`).
 """
 
 import httpx
 from typing import Annotated, Optional
-from fastapi import APIRouter, HTTPException, Query
-from pydantic import BaseModel, Field, conlist, field_validator
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, Field, conlist
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.db.session import get_db
+from app.services.lineups import build_model_payload
 
 router = APIRouter(prefix="/simulations", tags=["simulations"])
 
 
 # ---------- Request Schema ----------
-# Mirrors the model API's SimulateRequest so we get validation + Swagger docs
-# before forwarding the payload as-is.
-
-# A raw stat array = list of 10 mixed elements (str + numbers)
-StatArray = conlist(object, min_length=10, max_length=10)
+# The frontend sends ids only; stats are resolved from the database.
 
 
 class SimulateRequest(BaseModel):
-    """Lineup stat arrays forwarded to the model API."""
+    """Lineup player ids, resolved to stat arrays before hitting the model API."""
 
     # exactly 9 batters per team
-    home_batters: conlist(StatArray, min_length=9, max_length=9)
-    away_batters: conlist(StatArray, min_length=9, max_length=9)
-    home_pitcher: StatArray
-    away_pitcher: StatArray
+    home_batter_ids: conlist(int, min_length=9, max_length=9)
+    away_batter_ids: conlist(int, min_length=9, max_length=9)
+    home_pitcher_id: int
+    away_pitcher_id: int
 
-    home_bullpen: Optional[list[StatArray]] = None
-    away_bullpen: Optional[list[StatArray]] = None
+    home_bullpen_ids: Optional[list[int]] = None
+    away_bullpen_ids: Optional[list[int]] = None
 
     reliever_entry_inning: int = 6
     n_sims: Annotated[int, Field(ge=1, le=2000)] = 500
@@ -43,36 +43,41 @@ class SimulateRequest(BaseModel):
     away_team: str = "AWAY"
     match_id: int = 1
 
-    @field_validator("home_batters", "away_batters", "home_pitcher", "away_pitcher")
-    @classmethod
-    def check_hand(cls, v):
-        """stand/throws (element 0) must be L/R/S."""
-
-        def ok(arr):
-            return isinstance(arr[0], str) and arr[0] in ("L", "R", "S")
-
-        # v may be a single array (pitcher) or a list of arrays (batters)
-        arrays = v if v and isinstance(v[0], list) else [v]
-        for a in arrays:
-            if not ok(a):
-                raise ValueError("Element 0 (stand/throws) must be 'L', 'R' or 'S'")
-        return v
-
 
 # ---------- Endpoints ----------
 @router.post("/simulate")
-async def simulate(req: SimulateRequest, nested: bool = Query(False)):
+async def simulate(
+    req: SimulateRequest,
+    nested: bool = Query(False),
+    db: AsyncSession = Depends(get_db),
+):
     """
-    Forward lineup stat arrays to the model API and return its simulation.
+    Resolve player ids to stat arrays, then forward the lineup to the model API.
 
-    The request body is passed through unchanged to `POST {MODEL_API_URL}/simulate`.
+    The assembled stat-array payload is sent to `POST {MODEL_API_URL}/simulate`.
     """
+    payload = await build_model_payload(
+        db,
+        home_batter_ids=req.home_batter_ids,
+        away_batter_ids=req.away_batter_ids,
+        home_pitcher_id=req.home_pitcher_id,
+        away_pitcher_id=req.away_pitcher_id,
+        home_bullpen_ids=req.home_bullpen_ids,
+        away_bullpen_ids=req.away_bullpen_ids,
+        reliever_entry_inning=req.reliever_entry_inning,
+        n_sims=req.n_sims,
+        seed=req.seed,
+        home_team=req.home_team,
+        away_team=req.away_team,
+        match_id=req.match_id,
+    )
+
     async with httpx.AsyncClient(timeout=120.0) as client:
         try:
             resp = await client.post(
                 f"{settings.MODEL_API_URL}/simulate",
                 params={"nested": nested},
-                json=req.model_dump(),
+                json=payload,
             )
         except httpx.RequestError as e:
             raise HTTPException(
