@@ -2,7 +2,7 @@
 Seed the `players` table from official MLB stats (statsapi.mlb.com).
 
 Usage (from the backend/ directory):
-    python -m app.db.scripts.seed_players [season]   # season defaults to 2024
+    python -m app.db.scripts.seed_players [season]   # season defaults to 2026
 """
 
 import asyncio
@@ -25,7 +25,7 @@ from sqlalchemy.orm import sessionmaker
 
 AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
-SEASON = int(sys.argv[1]) if len(sys.argv) > 1 else 2024
+SEASON = int(sys.argv[1]) if len(sys.argv) > 1 else 2026
 MIN_PA_BATTER = 100
 MIN_PA_PITCHER = 50
 
