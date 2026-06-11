@@ -81,7 +81,7 @@ export default function Graph({
   if (isEmbedded) {
     return (
       <tr>
-        <td colSpan={8} style={{ padding: "0 14px 20px 14px", background: "rgba(0,0,0,0.2)" }}>
+        <td colSpan={8} style={{ padding: "0", background: "rgba(0,0,0,0.2)" }}>
           <div style={{
             background: backgroundColor || "rgba(13, 17, 23, 0.85)",
             border: "0.5px solid rgba(255,255,255,0.08)",

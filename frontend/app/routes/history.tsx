@@ -2,6 +2,8 @@ import { useState } from "react"
 import { PageLayout, TopBar, SummaryBar } from "../components/Layout"
 import type { Batter, Pitcher } from "../data/mockPlayers"
 import { MOCK_HISTORY } from "../data/mockSimulations"
+import Graph from "../components/Graphs"
+import type { SimulationResult } from "../data/mockSimulations"
 import type { Route } from "./+types/history"
 import { requireAuth } from "../utils/auth"
 
@@ -65,16 +67,12 @@ function PlayerStack({ players }: { players: (Batter | Pitcher)[] }) {
 
 function StatCell({ val, win }: { val: number; win: boolean }) {
   return (
-    <span style={{ fontSize: 1, fontWeight: 700, color: win ? "#4ade80" : "#f87171" }}>{val}</span>
+    <span style={{ fontSize: 16, fontWeight: 700, color: win ? "#4ade80" : "#f87171" }}>{val}</span>
   )
 }
 
 // ─── Expanded row ─────────────────────────────────────────────────────────────
-
 function ExpandedRow({ result }: { result: SimulationResult }) {
-  const allHomePlayers = [...result.home.batters, ...result.home.pitchers]
-  const allAwayPlayers = [...result.away.batters, ...result.away.pitchers]
-
   function Section({ title, players, accent }: { title: string; players: (Batter | Pitcher)[]; accent: string }) {
     return (
       <div>
@@ -85,7 +83,7 @@ function ExpandedRow({ result }: { result: SimulationResult }) {
               <PlayerPhoto mlbamId={p.mlbamId} name={p.name} color={p.teamColor} size={30} />
               <div>
                 <div style={{ fontSize: 15, fontWeight: 600, color: "#f0ede6" }}>{p.name}</div>
-                <div style={{ fontSize: 13, fontWeight:500,  color: "rgba(255, 255, 255, 0.64)" }}>
+                <div style={{ fontSize: 13, fontWeight: 500, color: "rgba(255, 255, 255, 0.64)" }}>
                   {p.team} · {"stand" in p ? `Bats ${(p as Batter).stand}` : `Throws ${(p as Pitcher).throws}`}
                 </div>
               </div>
@@ -99,28 +97,39 @@ function ExpandedRow({ result }: { result: SimulationResult }) {
   return (
     <tr>
       <td colSpan={9} style={{ padding: "0 0 2px 0", background: "transparent" }}>
-        <div style={{ margin: "0 0 4px 0", background: "rgba(13,17,23,0.7)", border: "0.5px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: "18px 20px", display: "flex", gap: 32 }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: "#e84057", letterSpacing: ".08em", textTransform: "uppercase", marginBottom: 14 }}>Away Lineup</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <Section title="Batters" players={result.away.batters} accent="#e84057" />
-              <Section title="Pitchers" players={result.away.pitchers} accent="#e84057" />
+        <div style={{ margin: "0 0 4px 0", background: "rgba(13,17,23,0.7)", border: "0.5px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: "18px 20px", display: "flex", flexDirection: "column", gap: 20 }}>
+
+          {/* Player lineups */}
+          <div style={{ display: "flex", gap: 32 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: "#e84057", letterSpacing: ".08em", textTransform: "uppercase", marginBottom: 14 }}>Away Lineup</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <Section title="Batters"  players={result.away.batters}  accent="#e84057" />
+                <Section title="Pitchers" players={result.away.pitchers} accent="#e84057" />
+              </div>
+            </div>
+            <div style={{ width: "0.5px", background: "rgba(255,255,255,0.07)", flexShrink: 0 }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: "#3b82f6", letterSpacing: ".08em", textTransform: "uppercase", marginBottom: 14 }}>Home Lineup</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <Section title="Batters"  players={result.home.batters}  accent="#3b82f6" />
+                <Section title="Pitchers" players={result.home.pitchers} accent="#3b82f6" />
+              </div>
             </div>
           </div>
-          <div style={{ width: "0.5px", background: "rgba(255,255,255,0.07)", flexShrink: 0 }} />
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: "#3b82f6", letterSpacing: ".08em", textTransform: "uppercase", marginBottom: 14 }}>Home Lineup</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <Section title="Batters" players={result.home.batters} accent="#3b82f6" />
-              <Section title="Pitchers" players={result.home.pitchers} accent="#3b82f6" />
-            </div>
-          </div>
+
+          {/* Graph — uses the linked game from mockData */}
+          <Graph
+            game={result.game}
+            isEmbedded={false}
+            fullWidth={true}
+            backgroundColor="rgba(13,17,23,0.6)"
+          />
         </div>
       </td>
     </tr>
   )
 }
-
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function History() {
