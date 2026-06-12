@@ -80,7 +80,7 @@ export default function Dashboard() {
             <table style={{ width: "100%", borderCollapse: "collapse" }} aria-label="Game predictions">
               <thead>
                 <tr style={{ background: "rgba(255,255,255,0.02)", borderBottom: "0.5px solid rgba(255,255,255,0.07)" }}>
-                  {["Team", "Probability", "Date", "Time", "Team 2", "Probability", "Simulate", "Info"].map((h, i) => (
+                  {["Team", "Probability", "Date", "Time", "Team 2", "Probability", "Info"].map((h, i) => (
                     <th key={i} scope="col" style={{ padding: "12px 14px", fontSize: 16, fontWeight: 600, color: "rgb(255, 255, 255)", textAlign: i >= 6 ? "center" : "left", letterSpacing: ".1em", textTransform: "uppercase", whiteSpace: "nowrap" }}>{h}</th>
                   ))}
                 </tr>
@@ -98,11 +98,6 @@ export default function Dashboard() {
                         <td style={{ padding: "14px 14px" }}><TeamCell name={game.team2} /></td>
                         <td style={{ padding: "14px 14px" }}><ProbCell prob={game.prob2} name={game.team2} /></td>
                         <td style={{ padding: "14px 14px", textAlign: "center" }}>
-                          <button onClick={() => navigate(`/game/${game.id}`)}
-                            aria-label={`Run simulation for ${game.team1} vs ${game.team2}`}
-                            style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "7px 13px", background: "rgba(192,30,46,0.12)", border: "0.5px solid rgba(192,30,46,0.45)", borderRadius: 6, color: "#f07080", fontSize: 14, fontWeight: 500, fontFamily: "'DM Sans', sans-serif", cursor: "pointer" }}>
-                            ▶ Run
-                          </button>
                         </td>
                         <td style={{ padding: "14px 14px", textAlign: "center" }}>
                           <button
