@@ -1,27 +1,13 @@
-# MLB Baseball Game Simulator
+# MLB Baseball Game simulator
+
+Miguel Enrique Soria A01028033
+Jose Antonio Gonzalez Martinez A01028517
+Fausto de la Cuesta Jimenez Vallejo  A01027988
+Valentina Gonzalez Hernandez A01784875
 
 An end-to-end MLB game prediction platform that pairs a LightGBM-based Monte Carlo simulator with a full-stack web application. Users can browse the weekly MLB schedule, explore 2024 player statistics, build custom lineups, and run their own game simulations to generate win probabilities and per-inning stats.
 
 ## Architecture
-
-```
-┌─────────────────┐     HTTP/JSON      ┌──────────────────────┐
-│   React Frontend│ ◄────────────────► │   FastAPI Backend     │
-│   (port 5173)   │  cookies + REST    │   (port 8000)         │
-└─────────────────┘                    └──────────┬───────────┘
-                                                   │ HTTP/JSON
-                                                   ▼
-                                        ┌──────────────────────┐
-                                        │   FastAPI Model API   │
-                                        │   (port 8001)         │
-                                        │   LightGBM + Rules    │
-                                        └──────────────────────┘
-                                                   │
-                                        ┌──────────▼───────────┐
-                                        │   PostgreSQL DB       │
-                                        │   (port 5432)         │
-                                        └──────────────────────┘
-```
 
 ![Architecture Diagram](images/ARCHITECTURE_DARK_DIAGRAM.drawio.png)
 
