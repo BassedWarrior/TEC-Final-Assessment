@@ -3,3 +3,4 @@ fastapi[standard]
   lightgbm
   numpy
   pandas
+  python-dotenv

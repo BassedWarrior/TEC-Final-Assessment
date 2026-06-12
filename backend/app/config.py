@@ -24,5 +24,8 @@ class Settings:
     # Base URL of the MLB model API (Monte Carlo /simulate service)
     MODEL_API_URL: str = os.getenv("MODEL_API_URL", "http://localhost:8001")
 
+    # Frontend origins allowed by CORS (comma-separated for multiple)
+    FRONTEND_URL: list[str] = os.getenv("FRONTEND_URL", "http://localhost:5173").split(",")
+
 
 settings = Settings()

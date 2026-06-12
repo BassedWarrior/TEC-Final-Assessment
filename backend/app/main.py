@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from app.config import settings
 from app.limiter import limiter
 from app.routes import auth, simulations, players, schedule
 
@@ -24,7 +25,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # CORS – allow React frontend to send cookies
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Your React dev server
+    allow_origins=settings.FRONTEND_URL,
     allow_credentials=True,  # Required for cookies
     allow_methods=["*"],
     allow_headers=["*"],
