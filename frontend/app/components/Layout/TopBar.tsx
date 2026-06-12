@@ -6,7 +6,7 @@ interface TopBarProps {
   rightElement?: ReactNode;
 }
 
-export function TopBar({ title, subtitle = "MLB · 2025", rightElement }: TopBarProps) {
+export function TopBar({ title, subtitle = "MLB · 2026", rightElement }: TopBarProps) {
   return (
     <div className="top-bar" style={{
       padding: "18px 24px",
@@ -50,7 +50,7 @@ export function TopBar({ title, subtitle = "MLB · 2025", rightElement }: TopBar
           color: "white",
         }}>
           <div style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--mlb-green)" }} />
-          2025 Season
+          2026 Season
         </div>
       )}
     </div>

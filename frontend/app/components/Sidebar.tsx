@@ -161,7 +161,7 @@ export default function Sidebar({ activePath }: SidebarProps) {
                 textTransform: "uppercase",
               }}
             >
-              2025 Season
+              2026 Season
             </div>
           </div>
         )}
