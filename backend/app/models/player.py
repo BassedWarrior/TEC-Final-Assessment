@@ -22,6 +22,7 @@ class Player(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)  # MLBAM player id
     name = Column(String, nullable=False)
+    team = Column(String, nullable=False)  # team full name, e.g. "Los Angeles Dodgers"
     hand = Column(String(1), nullable=False)  # stand/throws: "L", "R" or "S"
     pa_count = Column(Float, nullable=False)
     avg = Column(Float, nullable=False)
