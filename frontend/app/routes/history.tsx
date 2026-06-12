@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react"
 import { PageLayout, TopBar, SummaryBar } from "../components/Layout"
-import type { Batter, Pitcher } from "../data/mockPlayers"
 import Graph from "../components/Graphs"
-import type { SimulationResult } from "../data/mockSimulations"
 import { fetchHistory, matchToGame, type MatchResponse } from "../api/simulate"
 import { fetchPlayerStats, type PlayerStats as APIPlayerStats } from "../api/playerStats"
 import { teamNameToAbbr } from "../data/teamMeta"
@@ -120,7 +118,6 @@ function ExpandedRow({ result }: { result: SimulationResult }) {
             </div>
           </div>
 
-          {/* Graph — uses the linked game from mockData */}
           <Graph
             game={result.game}
             isEmbedded={false}

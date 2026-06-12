@@ -1,4 +1,3 @@
-import { teamMeta, mockGames, type Game, type InningScore } from "../data/mockData"
 import { useState } from "react"
 import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts"
 
