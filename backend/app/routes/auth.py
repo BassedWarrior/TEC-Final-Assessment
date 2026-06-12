@@ -84,7 +84,7 @@ async def register(
     await db.commit()
     await db.refresh(new_user)
 
-    access_token = create_access_token(data={"sub": str(new_user.id), "email": new_user.email})
+    access_token = create_access_token(data={"sub": str(new_user.id), "email": new_user.email, "ver": new_user.token_version})
 
     # Set httpOnly cookie (for React frontend)
     response.set_cookie(
@@ -130,7 +130,7 @@ async def login(
             detail="Incorrect email or password",
         )
 
-    access_token = create_access_token(data={"sub": str(user.id), "email": user.email})
+    access_token = create_access_token(data={"sub": str(user.id), "email": user.email, "ver": user.token_version})
 
     # Set httpOnly cookie (for React frontend)
     response.set_cookie(
@@ -148,10 +148,16 @@ async def login(
 
 
 @router.post("/logout")
-async def logout(response: Response):
+async def logout(
+    response: Response,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     """
-    Logout – clears the httpOnly cookie.
+    Logout – bumps token_version to invalidate all existing tokens, then clears the cookie.
     """
+    current_user.token_version += 1
+    await db.commit()
     response.delete_cookie("access_token", path="/")
     return {"message": "Logged out"}
 
