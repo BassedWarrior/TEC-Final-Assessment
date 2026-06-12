@@ -84,7 +84,7 @@ async def register(
     await db.commit()
     await db.refresh(new_user)
 
-    access_token = create_access_token(data={"sub": str(new_user.id)})
+    access_token = create_access_token(data={"sub": str(new_user.id), "email": new_user.email})
 
     # Set httpOnly cookie (for React frontend)
     response.set_cookie(
@@ -130,7 +130,7 @@ async def login(
             detail="Incorrect email or password",
         )
 
-    access_token = create_access_token(data={"sub": str(user.id)})
+    access_token = create_access_token(data={"sub": str(user.id), "email": user.email})
 
     # Set httpOnly cookie (for React frontend)
     response.set_cookie(
