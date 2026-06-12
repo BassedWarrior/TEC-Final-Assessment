@@ -26,20 +26,22 @@ export default function Graph({
   const awayRuns = game.innings.reduce((s, i) => s + i.awayRuns, 0)
 
   // Build cumulative chart data depending on selected mode
+  console.log(game.innings)
   const chartData = game.innings.map((ing, idx) => {
     const prev = game.innings.slice(0, idx)
     const cum = (key1: keyof InningScore, key2: keyof InningScore) => ({
-      [game.homeTeam]: prev.reduce((s, x) => s + (x[key1] as number), 0) + (ing[key1] as number),
-      [game.awayTeam]: prev.reduce((s, x) => s + (x[key2] as number), 0) + (ing[key2] as number),
+      [game.awayTeam]: prev.reduce((s, x) => s + (x[key1] as number), 0) + (ing[key1] as number),
+      [game.homeTeam]: prev.reduce((s, x) => s + (x[key2] as number), 0) + (ing[key2] as number),
     })
     return {
       name: `Inn ${ing.inning}`,
-      ...(mode === "score" ? cum("homeRuns", "awayRuns") :
-          mode === "hits"  ? cum("homeHits", "awayHits") :
-          mode === "hrs"   ? cum("homeHRs",  "awayHRs")  :
-                             cum("homeStrikeouts",   "awayStrikeouts")),
+      ...(mode === "score" ? cum("awayRuns", "homeRuns") :
+          mode === "hits"  ? cum("awayHits", "homeHits") :
+          mode === "hrs"   ? cum("awayHRs",  "homeHRs")  :
+                             cum("awayStrikeouts",   "homeStrikeouts")),
     }
   })
+  console.log(chartData)
 
   function StatPill({ label, v1, v2, stat }: { label: string; v1: number; v2: number; stat: StatMode }) {
     const active = mode === stat
@@ -61,9 +63,9 @@ export default function Graph({
           {active && <div style={{ fontSize: isEmbedded ? 8 : 10, fontWeight: 600, color: "#f07080", letterSpacing: ".06em" }}>● ACTIVE</div>}
         </div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ fontSize: isEmbedded ? 20 : 30, fontWeight: 700, color: awayTeamColor }}>{fmt2(v2)}</span>
+          <span style={{ fontSize: isEmbedded ? 20 : 30, fontWeight: 700, color: awayTeamColor }}>{fmt2(v1)}</span>
           <span style={{ fontSize: isEmbedded ? 14 : 18, color: "white" }}>vs</span>
-          <span style={{ fontSize: isEmbedded ? 20 : 30, fontWeight: 700, color: homeTeamColor }}>{fmt2(v1)}</span>
+          <span style={{ fontSize: isEmbedded ? 20 : 30, fontWeight: 700, color: homeTeamColor }}>{fmt2(v2)}</span>
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", marginTop: isEmbedded ? 2 : 4 }}>
           <span style={{ fontSize: isEmbedded ? 9 : 11, fontWeight: 600, color: "white" }}>{game.awayTeam}</span>
@@ -95,7 +97,7 @@ export default function Graph({
             Prediction Details
           </div>
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-            <StatPill label="Score" v1={homeRuns} v2={awayRuns} stat="score" />
+            <StatPill label="Score" v1={awayRuns} v2={homeRuns} stat="score" />
             <StatPill label="Hits" v1={game.hits[0]} v2={game.hits[1]} stat="hits" />
             <StatPill label="HRs" v1={game.homeruns[0]} v2={game.homeruns[1]} stat="hrs" />
             <StatPill label="K's" v1={game.strikeouts[0]} v2={game.strikeouts[1]} stat="ks" />
@@ -115,8 +117,8 @@ export default function Graph({
                 labelStyle={{ color: "white", marginBottom: 4, fontSize: 13, fontWeight: 600 }}
               />
               <Legend wrapperStyle={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.7)", paddingTop: 8 }} />
-              <Line type="monotone" dataKey={game.homeTeam} stroke={homeTeamColor} strokeWidth={2} dot={{ r: 3, fill: homeTeamColor }} activeDot={{ r: 5 }} />
               <Line type="monotone" dataKey={game.awayTeam} stroke={awayTeamColor} strokeWidth={2} dot={{ r: 3, fill: awayTeamColor }} activeDot={{ r: 5 }} />
+              <Line type="monotone" dataKey={game.homeTeam} stroke={homeTeamColor} strokeWidth={2} dot={{ r: 3, fill: homeTeamColor }} activeDot={{ r: 5 }} />
             </LineChart>
           </ResponsiveContainer>
         </div>
