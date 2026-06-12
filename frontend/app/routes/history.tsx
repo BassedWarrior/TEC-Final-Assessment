@@ -1,9 +1,11 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { PageLayout, TopBar, SummaryBar } from "../components/Layout"
 import type { Batter, Pitcher } from "../data/mockPlayers"
-import { MOCK_HISTORY } from "../data/mockSimulations"
 import Graph from "../components/Graphs"
 import type { SimulationResult } from "../data/mockSimulations"
+import { fetchHistory, matchToGame, type MatchResponse } from "../api/simulate"
+import { fetchPlayerStats, type PlayerStats as APIPlayerStats } from "../api/playerStats"
+import { teamNameToAbbr } from "../data/teamMeta"
 import type { Route } from "./+types/history"
 import { requireAuth } from "../utils/auth"
 
@@ -130,13 +132,124 @@ function ExpandedRow({ result }: { result: SimulationResult }) {
     </tr>
   )
 }
+// ─── API → view-model adapters ────────────────────────────────────────────────
+//
+// The history endpoint stores lineups as MLBAM id arrays. We resolve them
+// against the player-stats endpoint (same mapping the sandbox / stats pages use)
+// so each saved match can show its real rosters. team/colour aren't persisted,
+// so they fall back to the neutral "MLB" placeholder.
+
+function toBatter(p: APIPlayerStats): Batter {
+  return {
+    id: p.id,
+    name: p.name,
+    mlbamId: p.id,
+    pa: p.pa_count,
+    avg: Number(p.avg.toFixed(3)),
+    obp: Number(p.obp.toFixed(3)),
+    slg: Number(p.slg.toFixed(3)),
+    iso: Number(p.iso.toFixed(3)),
+    k_rate: Number((p.k_rate * 100).toFixed(1)),
+    bb_rate: Number((p.bb_rate * 100).toFixed(1)),
+    hr_rate: Number((p.hr_rate * 100).toFixed(1)),
+    stand: p.hand === "L" ? "L" : p.hand === "R" ? "R" : "S",
+    team: "MLB",
+    teamAbbr: teamNameToAbbr["MLB"] ?? "",
+    teamColor: "#888888",
+    is_rookie: p.is_rookie === "1",
+  }
+}
+
+function toPitcher(p: APIPlayerStats): Pitcher {
+  return {
+    id: p.id,
+    name: p.name,
+    mlbamId: p.id,
+    pa: p.pa_count,
+    avg: Number(p.avg.toFixed(3)),
+    obp: Number(p.obp.toFixed(3)),
+    slg: Number(p.slg.toFixed(3)),
+    iso: Number(p.iso.toFixed(3)),
+    k_rate: Number((p.k_rate * 100).toFixed(1)),
+    bb_rate: Number((p.bb_rate * 100).toFixed(1)),
+    hr_rate: Number((p.hr_rate * 100).toFixed(1)),
+    throws: p.hand === "L" ? "L" : "R",
+    team: "MLB",
+    teamAbbr: teamNameToAbbr["MLB"] ?? "",
+    teamColor: "#888888",
+    is_new: p.is_rookie === "1",
+  }
+}
+
+function matchToResult(match: MatchResponse, byId: Map<number, APIPlayerStats>): SimulationResult {
+  const resolveBatters = (ids: number[]) =>
+    ids.map(id => byId.get(id)).filter((p): p is APIPlayerStats => !!p).map(toBatter)
+  const resolvePitchers = (ids: number[]) =>
+    ids.map(id => byId.get(id)).filter((p): p is APIPlayerStats => !!p).map(toPitcher)
+
+  const wg = match.whole_game
+  const created = match.created_at ? new Date(match.created_at) : null
+
+  return {
+    id: match.match_id,
+    date: created
+      ? created.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
+      : "—",
+    time: created ? created.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }) : "",
+    game: matchToGame(match, "Away", "Home"),
+    away: {
+      batters: resolveBatters(match.away_batter_ids),
+      pitchers: resolvePitchers(match.away_pitcher_ids),
+      hits: Math.round(wg.avg_away_hits),
+      strikeouts: Math.round(wg.avg_away_strikeouts),
+      homeruns: Math.round(wg.avg_away_hr),
+      score: Math.round(wg.avg_away_runs),
+    },
+    home: {
+      batters: resolveBatters(match.home_batter_ids),
+      pitchers: resolvePitchers(match.home_pitcher_ids),
+      hits: Math.round(wg.avg_home_hits),
+      strikeouts: Math.round(wg.avg_home_strikeouts),
+      homeruns: Math.round(wg.avg_home_hr),
+      score: Math.round(wg.avg_home_runs),
+    },
+  }
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function History() {
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [search, setSearch] = useState("")
+  const [results, setResults] = useState<SimulationResult[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const filtered = MOCK_HISTORY.filter(r =>
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      try {
+        setLoading(true)
+        const [matches, players] = await Promise.all([fetchHistory(), fetchPlayerStats()])
+        if (cancelled) return
+        const byId = new Map(players.map(p => [p.id, p]))
+        // Most-recent first.
+        const mapped = matches
+          .map(m => matchToResult(m, byId))
+          .sort((a, b) => b.id - a.id)
+        setResults(mapped)
+        setError(null)
+      } catch (err: any) {
+        if (!cancelled) setError(err?.message ?? "Failed to load history")
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [])
+
+  const filtered = results.filter(r =>
     [...r.home.batters, ...r.home.pitchers, ...r.away.batters, ...r.away.pitchers]
       .some(p => p.name.toLowerCase().includes(search.toLowerCase()) || p.team.toLowerCase().includes(search.toLowerCase()))
     || r.date.toLowerCase().includes(search.toLowerCase())
@@ -175,7 +288,13 @@ export default function History() {
 
         {/* Table */}
         <div style={{ flex: 1, overflowY: "auto", padding: "16px 24px" }}>
-          {filtered.length === 0 ? (
+          {loading ? (
+            <div style={{ padding: 40, textAlign: "left", fontSize: 16, color: "rgba(255,255,255,0.8)" }}>Loading your simulation history…</div>
+          ) : error ? (
+            <div style={{ padding: 40, textAlign: "left", fontSize: 16, color: "rgba(255,255,255,0.9)", background: "rgba(192,30,46,0.5)", borderRadius: 10 }}>{error}</div>
+          ) : results.length === 0 ? (
+            <div style={{ padding: 40, textAlign: "left", fontSize: 16, color: "rgba(255,255,255,0.8)" }}>No simulations yet — run one in the Sandbox and it will show up here.</div>
+          ) : filtered.length === 0 ? (
             <div style={{ padding: 40, textAlign: "left", fontSize: 16, color: "rgba(255,255,255,0.8)", background: "rgba(192,30,46,0.5)", borderRadius: 10}}>No simulations match your search</div>
           ) : (
             <div style={{ background: "rgba(13,17,23,0.85)", border: "0.5px solid rgba(255,255,255,0.08)", borderRadius: 10, overflow: "hidden" }}>
@@ -291,10 +410,10 @@ export default function History() {
 
         {/* Summary bar */}
         <SummaryBar items={[
-            { label: "Total simulations", value: String(MOCK_HISTORY.length) },
-            { label: "Away wins", value: String(MOCK_HISTORY.filter(r => r.away.score > r.home.score).length) },
-            { label: "Home wins", value: String(MOCK_HISTORY.filter(r => r.home.score > r.away.score).length) },
-            { label: "Home Win %", value: String((MOCK_HISTORY.filter(r => r.home.score > r.away.score).length / MOCK_HISTORY.length * 100).toFixed(2)) },
+            { label: "Total simulations", value: String(results.length) },
+            { label: "Away wins", value: String(results.filter(r => r.away.score > r.home.score).length) },
+            { label: "Home wins", value: String(results.filter(r => r.home.score > r.away.score).length) },
+            { label: "Home Win %", value: results.length ? String((results.filter(r => r.home.score > r.away.score).length / results.length * 100).toFixed(2)) : "—" },
         ]} />
     </PageLayout>
   )

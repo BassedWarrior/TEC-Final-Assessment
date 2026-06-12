@@ -5,8 +5,9 @@ Simulation endpoints.
 service (`app.services.lineups`) relates each id to its stat line in the
 'players' table and rebuilds the stat arrays the model API expects. The model's
 per-simulation output is then aggregated into per-inning and whole-game averages
-(`app.services.results`), stored in the `matches` / `match_innings` tables, and
-the endpoint returns the id of the persisted match.
+(`app.services.results`), stored in the `matches` / `match_innings` tables — with
+the exact rosters saved per slot in `match_lineups` — and the endpoint returns
+the persisted match (averages plus the lineups it ran with).
 """
 
 import httpx
@@ -21,7 +22,7 @@ from sqlalchemy.orm import selectinload
 from app.config import settings
 from app.db.session import get_db
 from app.limiter import limiter
-from app.models.match import Match, MatchInning
+from app.models.match import Match, MatchInning, MatchLineup
 from app.models.user import User
 from app.services.lineups import build_model_payload
 from app.services.results import aggregate_results
@@ -40,6 +41,57 @@ _AVG_FIELDS = (
     "avg_home_strikeouts",
     "avg_away_strikeouts",
 )
+
+
+def _lineup_ids(match: Match, side: str, is_batter: bool) -> list[int]:
+    """Player ids for one side+role, in slot order (lineup_slots is slot-ordered)."""
+    return [
+        s.player_id
+        for s in match.lineup_slots
+        if s.side == side and s.is_batter == is_batter
+    ]
+
+
+def _build_lineup_slots(req: "SimulateRequest") -> list[MatchLineup]:
+    """Flatten an incoming lineup request into per-slot MatchLineup rows."""
+    home_pitchers = [req.home_pitcher_id, *(req.home_bullpen_ids or [])]
+    away_pitchers = [req.away_pitcher_id, *(req.away_bullpen_ids or [])]
+    groups = [
+        ("home", True, req.home_batter_ids),
+        ("away", True, req.away_batter_ids),
+        ("home", False, home_pitchers),
+        ("away", False, away_pitchers),
+    ]
+    return [
+        MatchLineup(side=side, is_batter=is_batter, slot_order=i, player_id=pid)
+        for side, is_batter, ids in groups
+        for i, pid in enumerate(ids, start=1)
+    ]
+
+
+def _serialize_match(match: Match) -> dict:
+    """Build the API response dict for a persisted match (shared by all endpoints)."""
+    return {
+        "match_id": match.id,
+        "created_at": match.created_at.isoformat() if match.created_at else None,
+        "home_team": match.home_team,
+        "away_team": match.away_team,
+        "n_sims": match.n_sims,
+        "home_wp": match.home_wp,
+        "away_wp": match.away_wp,
+        "home_batter_ids": _lineup_ids(match, "home", True),
+        "away_batter_ids": _lineup_ids(match, "away", True),
+        "home_pitcher_ids": _lineup_ids(match, "home", False),
+        "away_pitcher_ids": _lineup_ids(match, "away", False),
+        "whole_game": {f: getattr(match, f) for f in _AVG_FIELDS},
+        "innings": [
+            {
+                "inning_number": inn.inning_number,
+                **{f: getattr(inn, f) for f in _AVG_FIELDS},
+            }
+            for inn in match.innings
+        ],
+    }
 
 
 # ---------- Request Schema ----------
@@ -123,6 +175,10 @@ class MatchResponse(BaseModel):
     n_sims: int
     home_wp: float
     away_wp: float
+    home_batter_ids: List[int]
+    away_batter_ids: List[int]
+    home_pitcher_ids: List[int]
+    away_pitcher_ids: List[int]
     whole_game: WholeGameAverages
     innings: List[InningAverages]
 
@@ -173,7 +229,9 @@ async def simulate(
     # The response is already nested; aggregate it
     agg = aggregate_results(resp.json())
 
-    # Persist match-level averages + per-inning averages.
+    # Persist match-level averages + per-inning averages, plus the lineup slots so
+    # the history view can rebuild the exact rosters. Pitcher slot 1 is the
+    # starter; the bullpen follows.
     match = Match(
         user_id=user.id,
         home_team=req.home_team,
@@ -184,28 +242,16 @@ async def simulate(
         **agg["whole_game"],
     )
     match.innings = [MatchInning(**row) for row in agg["innings"]]
+    match.lineup_slots = _build_lineup_slots(req)
 
     db.add(match)
     await db.commit()
-    await db.refresh(match)
+    # Refresh only the server-defaulted column. A bare refresh() would expire the
+    # already-populated `innings` collection, and reading it back below would then
+    # trigger an async lazy-load outside the greenlet (MissingGreenlet).
+    await db.refresh(match, attribute_names=["created_at"])
 
-    return {
-        "match_id": match.id,
-        "created_at": match.created_at.isoformat() if match.created_at else None,
-        "home_team": match.home_team,
-        "away_team": match.away_team,
-        "n_sims": match.n_sims,
-        "home_wp": match.home_wp,
-        "away_wp": match.away_wp,
-        "whole_game": {f: getattr(match, f) for f in _AVG_FIELDS},
-        "innings": [
-            {
-                "inning_number": inn.inning_number,
-                **{f: getattr(inn, f) for f in _AVG_FIELDS},
-            }
-            for inn in match.innings
-        ],
-    }
+    return _serialize_match(match)
 
 
 @router.get("/history", response_model=list[MatchResponse])
@@ -220,7 +266,7 @@ async def get_history(
     result = await db.execute(
         select(Match)
         .where(Match.user_id == user.id)
-        .options(selectinload(Match.innings))
+        .options(selectinload(Match.innings), selectinload(Match.lineup_slots))
     )
     matches = result.scalars().all()
 
@@ -230,26 +276,7 @@ async def get_history(
             status_code=status.HTTP_404_NOT_FOUND, detail="No matches found."
         )
 
-    return [
-        {
-            "match_id": match.id,
-            "created_at": match.created_at.isoformat() if match.created_at else None,
-            "home_team": match.home_team,
-            "away_team": match.away_team,
-            "n_sims": match.n_sims,
-            "home_wp": match.home_wp,
-            "away_wp": match.away_wp,
-            "whole_game": {f: getattr(match, f) for f in _AVG_FIELDS},
-            "innings": [
-                {
-                    "inning_number": inn.inning_number,
-                    **{f: getattr(inn, f) for f in _AVG_FIELDS},
-                }
-                for inn in match.innings
-            ],
-        }
-        for match in matches
-    ]
+    return [_serialize_match(match) for match in matches]
 
 
 @router.get("/dashboard", response_model=list[MatchResponse])
@@ -263,7 +290,7 @@ async def get_dashboard(
     result = await db.execute(
         select(Match)
         .where(Match.user_id.is_(None))
-        .options(selectinload(Match.innings))
+        .options(selectinload(Match.innings), selectinload(Match.lineup_slots))
     )
     matches = result.scalars().all()
 
@@ -273,23 +300,4 @@ async def get_dashboard(
             status_code=status.HTTP_404_NOT_FOUND, detail="No matches found."
         )
 
-    return [
-        {
-            "match_id": match.id,
-            "created_at": match.created_at.isoformat() if match.created_at else None,
-            "home_team": match.home_team,
-            "away_team": match.away_team,
-            "n_sims": match.n_sims,
-            "home_wp": match.home_wp,
-            "away_wp": match.away_wp,
-            "whole_game": {f: getattr(match, f) for f in _AVG_FIELDS},
-            "innings": [
-                {
-                    "inning_number": inn.inning_number,
-                    **{f: getattr(inn, f) for f in _AVG_FIELDS},
-                }
-                for inn in match.innings
-            ],
-        }
-        for match in matches
-    ]
+    return [_serialize_match(match) for match in matches]
