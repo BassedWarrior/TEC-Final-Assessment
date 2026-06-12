@@ -17,6 +17,8 @@ from app.db.base import engine, Base
 # Import all models so Base knows about them
 from app.models.user import User  # noqa: F401
 from app.models.player import Player  # noqa: F401
+from app.models.team import Team  # noqa: F401
+from app.models.lineup import Lineup  # noqa: F401
 from app.models.match import Match  # noqa: F401
 from app.models.simulation import Simulation  # noqa: F401
 from app.models.inning import Inning  # noqa: F401
