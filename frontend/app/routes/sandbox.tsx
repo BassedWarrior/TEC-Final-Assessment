@@ -1,11 +1,12 @@
-import { useState, useRef } from "react"
+import { useState, useEffect, useRef } from "react"
 import { PageLayout, TopBar, SummaryBar } from "../components/Layout";
-import { MOCK_BATTERS, MOCK_PITCHERS } from "../data/mockPlayers"
 import type { Batter, Pitcher } from "../data/mockPlayers"
 import Graph from "../components/Graphs";
 import type { Game, InningScore as GameInningScore } from "../data/mockData"
 import type { Route } from "./+types/sandbox"
 import { requireAuth } from "../utils/auth"
+import { fetchPlayerStats, type PlayerStats as APIPlayerStats } from "../api/playerStats"
+import { teamNameToAbbr } from "../data/teamMeta";
 
 export async function loader({ request }: Route.LoaderArgs) {
   return await requireAuth(request)
@@ -57,17 +58,19 @@ interface PlayerPoolProps {
   tab: "batter" | "pitcher"
   onTabChange: (t: "batter" | "pitcher") => void
   onDragStart: (e: React.DragEvent, player: Batter | Pitcher, type: "batter" | "pitcher") => void
+  batters: Batter[]
+  pitchers: Pitcher[]
 }
 
-function PlayerPool({ search, onSearchChange, tab, onTabChange, onDragStart }: PlayerPoolProps) {
-  const batters = MOCK_BATTERS.filter(p =>
-    p.name.toLowerCase().includes(search.toLowerCase()) ||
-    p.team.toLowerCase().includes(search.toLowerCase())
-  )
-  const pitchers = MOCK_PITCHERS.filter(p =>
-    p.name.toLowerCase().includes(search.toLowerCase()) ||
-    p.team.toLowerCase().includes(search.toLowerCase())
-  )
+function PlayerPool({ search, onSearchChange, tab, onTabChange, onDragStart, batters: battersProp, pitchers: pitchersProp }: PlayerPoolProps) {
+    const batters = battersProp.filter(p =>
+      p.name.toLowerCase().includes(search.toLowerCase()) ||
+      p.team.toLowerCase().includes(search.toLowerCase())
+    )
+    const pitchers = pitchersProp.filter(p =>
+      p.name.toLowerCase().includes(search.toLowerCase()) ||
+      p.team.toLowerCase().includes(search.toLowerCase())
+    )
   const players = tab === "batter" ? batters : pitchers
 
   return (
@@ -187,12 +190,6 @@ function SlotRow({ index, label, player, onDrop, onRemove, onDragStartSlot, onDr
     </div>
   )
 }
-
-// ─── Team Lineup Table ────────────────────────────────────────────────────────
-
-// ─── Team Lineup Table (Two Column Version) ───────────────────────────────────
-
-// ─── Team Lineup Table (Two Column Version - Equal Width with Pitcher Controls) ───
 
 // ─── Team Lineup Table (with reset button) ───────────────────────────────────
 
@@ -549,11 +546,78 @@ export default function Sandbox() {
   const [away, setAway] = useState<TeamLineup>(emptyLineup())
   const [poolSearch, setPoolSearch] = useState("")
   const [poolTab, setPoolTab] = useState<"batter" | "pitcher">("batter")
+  const [realBatters, setRealBatters] = useState<Batter[]>([])
+  const [realPitchers, setRealPitchers] = useState<Pitcher[]>([])
+  const [loadingPlayers, setLoadingPlayers] = useState(true)
   const [dragOverSlot, setDragOverSlot] = useState<{ side: TeamSide; section: "batters" | "pitchers"; index: number } | null>(null)
   const [gameData, setGameData] = useState<Game | null>(null)
   const [isSimulating, setIsSimulating] = useState(false)
   const [hasSimulated, setHasSimulated] = useState(false)
   const dragPayload = useRef<{ player: Batter | Pitcher; type: "batter" | "pitcher" } | null>(null)
+
+    // Fetch real player data
+  useEffect(() => {
+    const loadPlayers = async () => {
+      try {
+        setLoadingPlayers(true);
+        const data = await fetchPlayerStats();
+        console.log("Total players loaded:", data.length);
+        
+        // Transform batters (same as Statistics page)
+        const battersData: Batter[] = data
+          .filter(player => player.is_batter === true)
+          .map(player => ({
+            id: player.id,
+            name: player.name,
+            mlbamId: player.id,
+            pa: player.pa_count,
+            avg: Number(player.avg.toFixed(3)),
+            obp: Number(player.obp.toFixed(3)),
+            slg: Number(player.slg.toFixed(3)),
+            iso: Number(player.iso.toFixed(3)),
+            k_rate: Number((player.k_rate * 100).toFixed(1)),
+            bb_rate: Number((player.bb_rate * 100).toFixed(1)),
+            hr_rate: Number((player.hr_rate * 100).toFixed(1)),
+            stand: player.hand === "L" ? "L" : player.hand === "R" ? "R" : "S",
+            team: "MLB",
+            teamAbbr: teamNameToAbbr["MLB"] || "#888888",
+            teamColor: "#888888",
+            is_rookie: player.is_rookie === "1",
+          }));
+        
+        // Transform pitchers
+        const pitchersData: Pitcher[] = data
+          .filter(player => player.is_batter === false)
+          .map(player => ({
+            id: player.id,
+            name: player.name,
+            mlbamId: player.id,
+            pa: player.pa_count,
+            avg: Number(player.avg.toFixed(3)),
+            obp: Number(player.obp.toFixed(3)),
+            slg: Number(player.slg.toFixed(3)),
+            iso: Number(player.iso.toFixed(3)),
+            k_rate: Number((player.k_rate * 100).toFixed(1)),
+            bb_rate: Number((player.bb_rate * 100).toFixed(1)),
+            hr_rate: Number((player.hr_rate * 100).toFixed(1)),
+            throws: player.hand === "L" ? "L" : "R",
+            team: "MLB",
+            teamAbbr: teamNameToAbbr["MLB"] || "#888888",
+            teamColor: "#888888",
+            is_new: player.is_rookie === "1",
+          }));
+        
+        setRealBatters(battersData);
+        setRealPitchers(pitchersData);
+        setLoadingPlayers(false);
+      } catch (err) {
+        console.error("Failed to load players:", err);
+        setLoadingPlayers(false);
+      }
+    };
+    
+    loadPlayers();
+  }, []);
 
   // Check if both teams have complete lineups
   const isLineupComplete = () => {
@@ -688,8 +752,16 @@ export default function Sandbox() {
   const homePitchersFilled = home.pitchers.filter(Boolean).length
   const awayPitchersFilled = away.pitchers.filter(Boolean).length
 
-  const missingBatters = (9 - homeBattersFilled) + (9 - awayBattersFilled)
-  const missingPitchers = (homePitchersFilled === 0 ? 1 : 0) + (awayPitchersFilled === 0 ? 1 : 0)
+  if (loadingPlayers) {
+    return (
+      <PageLayout activePath="/sandbox" backgroundImage="/images/bg-sandbox.jpg">
+        <TopBar title="Sandbox" />
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "400px" }}>
+          <div style={{ color: "white", fontSize: 18 }}>Loading players...</div>
+        </div>
+      </PageLayout>
+    );
+  }
 
   return (
     <PageLayout activePath="/sandbox" backgroundImage="/images/bg-sandbox.jpg">
@@ -704,6 +776,8 @@ export default function Sandbox() {
             tab={poolTab}
             onTabChange={setPoolTab}
             onDragStart={handlePoolDragStart}
+            batters={realBatters}
+            pitchers={realPitchers}
           />
         </div>
 
