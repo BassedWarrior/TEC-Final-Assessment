@@ -8,7 +8,7 @@ Provides:
 - Protected 'me' endpoint
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, Response
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,6 +18,7 @@ from app.db.session import get_db
 from app.models.user import User
 from app.utils.security import verify_password, get_password_hash, create_access_token
 from app.utils.dependencies import get_current_user
+from app.limiter import limiter
 from app.config import settings
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
@@ -62,8 +63,9 @@ class RegisterResponse(UserResponse, TokenResponse):
 
 # ---------- Endpoints ----------
 @router.post("/register", response_model=UserResponse, status_code=201)
+@limiter.limit("10/minute")
 async def register(
-    user_data: UserCreate, response: Response, db: AsyncSession = Depends(get_db)
+    request: Request, user_data: UserCreate, response: Response, db: AsyncSession = Depends(get_db)
 ):
     """
     Create a new user account.
@@ -107,7 +109,9 @@ async def register(
 
 
 @router.post("/login", response_model=TokenResponse)
+@limiter.limit("20/minute")
 async def login(
+    request: Request,
     response: Response,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_db),

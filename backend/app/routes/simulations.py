@@ -8,10 +8,11 @@ built from the database instead of being received in the request body.
 
 import httpx
 from typing import Annotated, Optional
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field, conlist, field_validator
 
 from app.config import settings
+from app.limiter import limiter
 
 router = APIRouter(prefix="/simulations", tags=["simulations"])
 
@@ -61,7 +62,8 @@ class SimulateRequest(BaseModel):
 
 # ---------- Endpoints ----------
 @router.post("/simulate")
-async def simulate(req: SimulateRequest, nested: bool = Query(False)):
+@limiter.limit("30/minute")
+async def simulate(request: Request, req: SimulateRequest, nested: bool = Query(False)):
     """
     Forward lineup stat arrays to the model API and return its simulation.
 

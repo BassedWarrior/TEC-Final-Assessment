@@ -7,6 +7,9 @@ adds CORS middleware for React frontend, and defines health check.
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from app.limiter import limiter
 from app.routes import auth, simulations, players, schedule
 
 app = FastAPI(
@@ -14,6 +17,9 @@ app = FastAPI(
     description="Authentication backend for Monte Carlo baseball simulations",
     version="0.1.0",
 )
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS – allow React frontend to send cookies
 app.add_middleware(
