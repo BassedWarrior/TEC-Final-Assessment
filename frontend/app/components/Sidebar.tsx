@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router"
 
+const API_URL = import.meta.env.VITE_API_URL
+
 const navItems = [
   { label: "Dashboard",  icon: "⊞", path: "/" },
   { label: "Statistics", icon: "≡", path: "/statistics" },
@@ -40,7 +42,7 @@ export default function Sidebar({ activePath }: SidebarProps) {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const res = await fetch("http://localhost:8000/auth/me", {
+        const res = await fetch(`${API_URL}/auth/me`, {
           credentials: "include",
         })
 
@@ -67,7 +69,7 @@ export default function Sidebar({ activePath }: SidebarProps) {
 
   const handleLogout = async () => {
     try {
-      await fetch("http://localhost:8000/auth/logout", {
+      await fetch(`${API_URL}/auth/logout`, {
         method: "POST",
         credentials: "include",
       })

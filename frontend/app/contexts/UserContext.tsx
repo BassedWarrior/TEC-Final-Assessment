@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
 
+const API_URL = import.meta.env.VITE_API_URL
+
 interface User {
   id: string;
   email: string;
@@ -22,7 +24,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   const fetchUser = async () => {
     try {
-      const res = await fetch("http://localhost:8000/auth/me", {
+      const res = await fetch(`${API_URL}/auth/me`, {
         credentials: "include",
       });
       if (res.ok) {
@@ -46,7 +48,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     setUser(null);
     // Call logout endpoint if needed
-    fetch("http://localhost:8000/auth/logout", { method: "POST", credentials: "include" }).catch(console.error);
+    fetch(`${API_URL}/auth/logout`, { method: "POST", credentials: "include" }).catch(console.error);
   };
 
   return (
