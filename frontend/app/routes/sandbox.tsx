@@ -693,8 +693,6 @@ export default function Sandbox() {
       away_pitcher_id: awayPitchers[0].id,
       home_bullpen_ids: homePitchers.length > 1 ? homePitchers.slice(1).map(p => p.id) : undefined,
       away_bullpen_ids: awayPitchers.length > 1 ? awayPitchers.slice(1).map(p => p.id) : undefined,
-      home_team: "Home",
-      away_team: "Away",
     }
 
     try {

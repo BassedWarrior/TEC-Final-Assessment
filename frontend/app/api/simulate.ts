@@ -1,4 +1,4 @@
-import type { Game, InningScore } from "../data/mockData";
+import type { Game, InningScore } from "../data/game.ts";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -96,7 +96,7 @@ export async function fetchHistory(): Promise<MatchResponse[]> {
 //   - innings[].avg_*_hits / _hr / _strikeouts are PER-INNING
 // The Graph component sums per-inning values to build cumulative lines, so we
 // convert the cumulative runs back into per-inning deltas and leave the rest
-// as-is. team1 = away, team2 = home (matches the sandbox layout / colours).
+// as-is. homeTeam = away, awayTeam = home (matches the sandbox layout / colours).
 
 export function matchToGame(
   match: MatchResponse,
@@ -108,21 +108,21 @@ export function matchToGame(
   let prevAwayRuns = 0;
   let prevHomeRuns = 0;
   const innings: InningScore[] = ordered.map((inn) => {
-    const team1 = inn.avg_away_runs - prevAwayRuns; // per-inning away runs
-    const team2 = inn.avg_home_runs - prevHomeRuns; // per-inning home runs
+    const homeRuns = inn.avg_away_runs - prevAwayRuns; // per-inning away runs
+    const awayRuns = inn.avg_home_runs - prevHomeRuns; // per-inning home runs
     prevAwayRuns = inn.avg_away_runs;
     prevHomeRuns = inn.avg_home_runs;
 
     return {
       inning: inn.inning_number,
-      team1,
-      team2,
-      hits1: inn.avg_away_hits,
-      hits2: inn.avg_home_hits,
-      hrs1: inn.avg_away_hr,
-      hrs2: inn.avg_home_hr,
-      ks1: inn.avg_away_strikeouts,
-      ks2: inn.avg_home_strikeouts,
+      homeRuns,
+      awayRuns,
+      homeHits: inn.avg_away_hits,
+      awayHits: inn.avg_home_hits,
+      homeHRs: inn.avg_away_hr,
+      awayHRs: inn.avg_home_hr,
+      homeStrikeouts: inn.avg_away_strikeouts,
+      awayStrikeouts: inn.avg_home_strikeouts,
     };
   });
 
@@ -130,10 +130,10 @@ export function matchToGame(
 
   return {
     id: match.match_id,
-    team1: awayName,
-    team2: homeName,
-    prob1: Math.round(match.away_wp * 100),
-    prob2: Math.round(match.home_wp * 100),
+    homeTeam: awayName,
+    awayTeam: homeName,
+    homeWinProb: Math.round(match.away_wp * 100),
+    awayWinProb: Math.round(match.home_wp * 100),
     date: match.created_at ? new Date(match.created_at).toLocaleDateString() : "",
     time: match.created_at ? new Date(match.created_at).toLocaleTimeString() : "",
     innings,
