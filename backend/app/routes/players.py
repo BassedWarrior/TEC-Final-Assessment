@@ -10,6 +10,7 @@ class PlayerResponse(BaseModel):
     id: int
     name: str
     hand: str
+    team: str
     pa_count: float
     avg: float
     obp: float

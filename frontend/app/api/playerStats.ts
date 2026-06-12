@@ -3,6 +3,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL;
 export interface PlayerStats {
   id: number;
   name: string;
+  team: string;
   hand: string;
   pa_count: number;
   avg: number;

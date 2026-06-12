@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from "react"
 import { PageLayout, TopBar, SummaryBar } from "../components/Layout"
-import { MOCK_BATTERS, MOCK_PITCHERS, TEAMS } from "../data/mockPlayers"
 import type { Batter, Pitcher } from "../data/mockPlayers"
 import { fetchPlayerStats, type PlayerStats as APIPlayerStats } from "../api/playerStats";
 import { teamNameToAbbr, teamMeta } from "../data/teamMeta";
@@ -216,6 +215,7 @@ export default function Statistics() {
   const [selected, setSelected] = useState<Batter | Pitcher | null>(null)
   const [allBatters, setAllBatters] = useState<Batter[]>([])
   const [allPitchers, setAllPitchers] = useState<Pitcher[]>([])
+  const [availableTeams, setAvailableTeams] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -241,7 +241,7 @@ export default function Statistics() {
             bb_rate: Number((player.bb_rate * 100).toFixed(1)),
             hr_rate: Number((player.hr_rate * 100).toFixed(1)),
             stand: player.hand === "L" ? "L" : player.hand === "R" ? "R" : "S",
-            team: "MLB",
+            team: player.team,
             teamAbbr: teamNameToAbbr["MLB"] ?? null,
             teamColor: "#888888",
             is_rookie: player.is_rookie === "1",
@@ -262,7 +262,7 @@ export default function Statistics() {
             bb_rate: Number((player.bb_rate * 100).toFixed(1)),
             hr_rate: Number((player.hr_rate * 100).toFixed(1)),
             throws: player.hand === "L" ? "L" : "R",
-            team: "MLB",
+            team: player.team,
             teamAbbr: teamNameToAbbr["MLB"] ?? null,
             teamColor: "#888888",
             is_new: player.is_rookie === "1",
@@ -270,6 +270,14 @@ export default function Statistics() {
 
         setAllBatters(battersData);
         setAllPitchers(pitchersData);
+
+        // Extract unique team names from both batters and pitchers
+        const allTeams = [...battersData, ...pitchersData]
+          .map(p => p.team)
+          .filter((team, index, self) => team && self.indexOf(team) === index)
+          .sort();
+        setAvailableTeams(allTeams);
+
         setLoading(false);
       } catch (err: any) {
         console.error("Error loading players:", err);
@@ -290,7 +298,7 @@ export default function Statistics() {
   }
 
   const batters = useMemo(() => {
-    let data = [...allBatters]  // Change this from MOCK_BATTERS to allBatters
+    let data = [...allBatters]
     if (search) data = data.filter(p => p.name.toLowerCase().includes(search.toLowerCase()) || p.team.toLowerCase().includes(search.toLowerCase()))
     if (teamFilter) data = data.filter(p => p.team === teamFilter)
     if (rookieFilter === "rookie") data = data.filter(p => p.is_rookie)
@@ -400,7 +408,7 @@ export default function Statistics() {
           <select value={teamFilter} onChange={e => setTeamFilter(e.target.value)} aria-label="Filter by team"
             style={{ background: "rgba(13, 17, 23, 0.63)", border: "0.5px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "8px 10px", fontSize: 14, color: "rgba(255, 255, 255, 0.84)", fontFamily: "'DM Sans', sans-serif", outline: "none", cursor: "pointer" }}>
             <option value="">All teams</option>
-            {TEAMS.map(t => <option key={t}>{t}</option>)}
+            {availableTeams.map(t => <option key={t}>{t}</option>)}
           </select>
           <select value={rookieFilter} onChange={e => setRookieFilter(e.target.value)} aria-label="Filter by experience"
             style={{ background: "rgba(13, 17, 23, 0.63)", border: "0.5px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "8px 10px", fontSize: 14, color: "rgba(255, 255, 255, 0.84)", fontFamily: "'DM Sans', sans-serif", outline: "none", cursor: "pointer" }}>

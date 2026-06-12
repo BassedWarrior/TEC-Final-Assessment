@@ -153,8 +153,8 @@ function toBatter(p: APIPlayerStats): Batter {
     bb_rate: Number((p.bb_rate * 100).toFixed(1)),
     hr_rate: Number((p.hr_rate * 100).toFixed(1)),
     stand: p.hand === "L" ? "L" : p.hand === "R" ? "R" : "S",
-    team: "MLB",
-    teamAbbr: teamNameToAbbr["MLB"] ?? "",
+    team: p.team,
+    teamAbbr: teamNameToAbbr[p.team] ?? "MLB",
     teamColor: "#888888",
     is_rookie: p.is_rookie === "1",
   }
@@ -174,8 +174,8 @@ function toPitcher(p: APIPlayerStats): Pitcher {
     bb_rate: Number((p.bb_rate * 100).toFixed(1)),
     hr_rate: Number((p.hr_rate * 100).toFixed(1)),
     throws: p.hand === "L" ? "L" : "R",
-    team: "MLB",
-    teamAbbr: teamNameToAbbr["MLB"] ?? "",
+    team: p.team,
+    teamAbbr: teamNameToAbbr[p.team] ?? "MLB",
     teamColor: "#888888",
     is_new: p.is_rookie === "1",
   }
