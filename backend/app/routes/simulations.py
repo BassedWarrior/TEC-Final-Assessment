@@ -61,7 +61,6 @@ class SimulateRequest(BaseModel):
     seed: Optional[int] = None
     home_team: str = "HOME"
     away_team: str = "AWAY"
-    match_id: int = 1
 
 
 # ---------- Endpoints ----------
@@ -89,7 +88,6 @@ async def simulate(
         seed=req.seed,
         home_team=req.home_team,
         away_team=req.away_team,
-        match_id=req.match_id,
     )
 
     # Ask the model for the flat per-inning breakdown (needed to aggregate).

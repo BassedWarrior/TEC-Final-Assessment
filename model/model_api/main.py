@@ -47,7 +47,6 @@ def simulate(req: SimulateRequest, nested: bool = Query(False)):
             seed=42,
             home_team=req.home_team,
             away_team=req.away_team,
-            match_id=req.match_id,
         )
     except FileNotFoundError as e:
         # falta pa_model.txt o feature_names.csv

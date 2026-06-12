@@ -20,7 +20,6 @@ class SimulateRequest(BaseModel):
     seed: Optional[int] = None
     home_team: str = "HOME"
     away_team: str = "AWAY"
-    match_id: int = 1
 
     @field_validator("home_batters", "away_batters", "home_pitcher", "away_pitcher")
     @classmethod
