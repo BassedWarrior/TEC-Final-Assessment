@@ -122,36 +122,7 @@ export default function Dashboard() {
     { label: "Games analyzed", value: "2,430" },
   ];
 
-  if (loading) {
-    return (
-      <PageLayout activePath="/" backgroundImage="/images/bg-dashboard.jpg">
-        <TopBar title="This week's predictions" />
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "400px" }}>
-          <div style={{ color: "white", fontSize: 18 }}>Loading schedule...</div>
-        </div>
-        <SummaryBar items={summaryItems} />
-      </PageLayout>
-    );
-  }
-
-  if (error) {
-    return (
-      <PageLayout activePath="/" backgroundImage="/images/bg-dashboard.jpg">
-        <TopBar title="This week's predictions" />
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "400px", flexDirection: "column", gap: 16 }}>
-          <div style={{ color: "#ff6b6b", fontSize: 18 }}>{error}</div>
-          <button 
-            onClick={() => window.location.reload()}
-            style={{ padding: "8px 16px", background: "#89082d", border: "none", borderRadius: 4, color: "white", cursor: "pointer" }}
-          >
-            Retry
-          </button>
-        </div>
-        <SummaryBar items={summaryItems} />
-      </PageLayout>
-    );
-  }
-
+  // Always render the full layout – table structure remains visible
   return (
     <PageLayout activePath="/" backgroundImage="/images/bg-dashboard.jpg">
       <TopBar title="This week's predictions" />
@@ -168,41 +139,71 @@ export default function Dashboard() {
               </tr>
             </thead>
             <tbody>
-              {sorted.map(game => {
-                const isExpanded = expandedId === game.id
-                return (
-                  <React.Fragment key={game.id}>
-                    <tr style={{ borderBottom: isExpanded ? "none" : "0.5px solid rgba(255,255,255,0.04)" }}>
-                      <td style={{ padding: "14px 14px" }}><TeamCell name={game.team1} /></td>
-                      <td style={{ padding: "14px 14px" }}><ProbCell prob={game.prob1} name={game.team1} /></td>
-                      <td style={{ padding: "14px 14px", fontSize: 14, fontWeight: 700, color: "#f0ede6" }}>{game.date}</td>
-                      <td style={{ padding: "14px 14px", fontSize: 15, color: "rgba(255, 255, 255, 0.89)", fontWeight: 700 }}>{game.time}</td>
-                      <td style={{ padding: "14px 14px" }}><TeamCell name={game.team2} /></td>
-                      <td style={{ padding: "14px 14px" }}><ProbCell prob={game.prob2} name={game.team2} /></td>
-                      <td style={{ padding: "14px 14px", textAlign: "center" }}>
-                        <button
-                          onClick={() => setExpandedId(isExpanded ? null : game.id)}
-                          aria-label={isExpanded ? "Collapse predictions" : "Expand predictions"}
-                          style={{ width: 30, height: 30, display: "inline-flex", alignItems: "center", justifyContent: "center", background: isExpanded ? "rgba(192,30,46,0.15)" : "rgba(255,255,255,0.04)", border: isExpanded ? "0.5px solid rgba(192,30,46,0.4)" : "2px solid rgba(255,255,255,0.1)", borderRadius: "50%", color: isExpanded ? "#f07080" : "rgba(255, 255, 255, 0.78)", fontSize: 14, fontFamily: "'DM Sans', sans-serif", cursor: "pointer" }}>
-                          {isExpanded ? "▲" : "▼"}
-                        </button>
-                      </td>
-                    </tr>
-                    {isExpanded && (
-                      <tr>
-                        <td colSpan={7} style={{ padding: 0 }}>
-                          <Graph 
-                            game={game} 
-                            fullWidth={true}
-                            isEmbedded={true}
-                            backgroundColor="rgba(0,0,0,0.3)"
-                          />
+              {loading ? (
+                // Loading placeholder row - keeps table height
+                <tr>
+                  <td colSpan={7} style={{ padding: "32px 14px", textAlign: "center", color: "rgba(255,255,255,0.5)", fontSize: 16 }}>
+                    Loading schedule...
+                  </td>
+                </tr>
+              ) : error ? (
+                // Error row with retry button
+                <tr>
+                  <td colSpan={7} style={{ padding: "32px 14px", textAlign: "center" }}>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+                      <span style={{ color: "#ff6b6b", fontSize: 16 }}>{error}</span>
+                      <button
+                        onClick={() => window.location.reload()}
+                        style={{ padding: "6px 16px", background: "#89082d", border: "none", borderRadius: 4, color: "white", cursor: "pointer" }}
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ) : sorted.length === 0 ? (
+                <tr>
+                  <td colSpan={7} style={{ padding: "32px 14px", textAlign: "center", color: "rgba(255,255,255,0.5)", fontSize: 16 }}>
+                    No games scheduled this week.
+                  </td>
+                </tr>
+              ) : (
+                sorted.map(game => {
+                  const isExpanded = expandedId === game.id
+                  return (
+                    <React.Fragment key={game.id}>
+                      <tr style={{ borderBottom: isExpanded ? "none" : "0.5px solid rgba(255,255,255,0.04)" }}>
+                        <td style={{ padding: "14px 14px" }}><TeamCell name={game.team1} /></td>
+                        <td style={{ padding: "14px 14px" }}><ProbCell prob={game.prob1} name={game.team1} /></td>
+                        <td style={{ padding: "14px 14px", fontSize: 14, fontWeight: 700, color: "#f0ede6" }}>{game.date}</td>
+                        <td style={{ padding: "14px 14px", fontSize: 15, color: "rgba(255, 255, 255, 0.89)", fontWeight: 700 }}>{game.time}</td>
+                        <td style={{ padding: "14px 14px" }}><TeamCell name={game.team2} /></td>
+                        <td style={{ padding: "14px 14px" }}><ProbCell prob={game.prob2} name={game.team2} /></td>
+                        <td style={{ padding: "14px 14px", textAlign: "center" }}>
+                          <button
+                            onClick={() => setExpandedId(isExpanded ? null : game.id)}
+                            aria-label={isExpanded ? "Collapse predictions" : "Expand predictions"}
+                            style={{ width: 30, height: 30, display: "inline-flex", alignItems: "center", justifyContent: "center", background: isExpanded ? "rgba(192,30,46,0.15)" : "rgba(255,255,255,0.04)", border: isExpanded ? "0.5px solid rgba(192,30,46,0.4)" : "2px solid rgba(255,255,255,0.1)", borderRadius: "50%", color: isExpanded ? "#f07080" : "rgba(255, 255, 255, 0.78)", fontSize: 14, fontFamily: "'DM Sans', sans-serif", cursor: "pointer" }}>
+                            {isExpanded ? "▲" : "▼"}
+                          </button>
                         </td>
                       </tr>
-                    )}
-                  </React.Fragment>
-                )
-              })}
+                      {isExpanded && (
+                        <tr>
+                          <td colSpan={7} style={{ padding: 0 }}>
+                            <Graph
+                              game={game}
+                              fullWidth={true}
+                              isEmbedded={true}
+                              backgroundColor="rgba(0,0,0,0.3)"
+                            />
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  )
+                })
+              )}
             </tbody>
           </table>
         </div>
