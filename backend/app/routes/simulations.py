@@ -205,43 +205,45 @@ async def simulate(
     }
 
 
-@router.get("/{match_id}", response_model=MatchResponse)
-async def get_match(
-    match_id: int,
+@router.get("/history", response_model=list[MatchResponse])
+async def get_history(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
     """
-    Return a stored match: win probabilities, whole-game averages and the
-    per-inning average breakdown. Only the match's owner can read it.
+    Return stored sandbox match history: win probabilities, whole-game averages
+    and the per-inning average breakdown. Only the match's owner can read it.
     """
     result = await db.execute(
         select(Match)
-        .where(Match.id == match_id)
+        .where(Match.user_id == user.id)
         .options(selectinload(Match.innings))
     )
-    match = result.scalar_one_or_none()
+    matches = result.scalars().all()
 
     # 404 (not 403) when it belongs to someone else, so we don't leak existence.
-    if match is None or match.user_id != user.id:
+    if matches is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Match not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="No matches found."
         )
 
-    return {
-        "match_id": match.id,
-        "created_at": match.created_at.isoformat() if match.created_at else None,
-        "home_team": match.home_team,
-        "away_team": match.away_team,
-        "n_sims": match.n_sims,
-        "home_wp": match.home_wp,
-        "away_wp": match.away_wp,
-        "whole_game": {f: getattr(match, f) for f in _AVG_FIELDS},
-        "innings": [
-            {
-                "inning_number": inn.inning_number,
-                **{f: getattr(inn, f) for f in _AVG_FIELDS},
-            }
-            for inn in match.innings
-        ],
-    }
+    return [
+        {
+            "match_id": match.id,
+            "created_at": match.created_at.isoformat() if match.created_at else None,
+            "home_team": match.home_team,
+            "away_team": match.away_team,
+            "n_sims": match.n_sims,
+            "home_wp": match.home_wp,
+            "away_wp": match.away_wp,
+            "whole_game": {f: getattr(match, f) for f in _AVG_FIELDS},
+            "innings": [
+                {
+                    "inning_number": inn.inning_number,
+                    **{f: getattr(inn, f) for f in _AVG_FIELDS},
+                }
+                for inn in match.innings
+            ],
+        }
+        for match in matches
+    ]
