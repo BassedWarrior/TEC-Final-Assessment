@@ -7,7 +7,7 @@ adds CORS middleware for React frontend, and defines health check.
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import auth, simulations, players
+from app.routes import auth, simulations, players, schedule
 
 app = FastAPI(
     title="Baseball Simulator API",
@@ -28,6 +28,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(simulations.router)
 app.include_router(players.router)
+app.include_router(schedule.router)
 
 
 @app.get("/health")
