@@ -84,49 +84,44 @@ export default function Graph({
   // Embedded version (for dashboard table)
   if (isEmbedded) {
     return (
-      <tr>
-        <td colSpan={8} style={{ padding: "0", background: "rgba(0,0,0,0.2)" }}>
-          <div style={{
-            background: backgroundColor || "rgba(13, 17, 23, 0.85)",
-            border: "0.5px solid rgba(255,255,255,0.08)",
-            borderRadius: 8,
-            padding: "16px 20px",
-          }}>
-            {/* Simplified layout for embedded view */}
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "white", letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 12 }}>
-                Prediction Details
-              </div>
-              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                <StatPill label="Score" v1={homeRuns} v2={awayRuns} stat="score" />
-                <StatPill label="Hits" v1={game.hits[0]} v2={game.hits[1]} stat="hits" />
-                <StatPill label="HRs" v1={game.homeruns[0]} v2={game.homeruns[1]} stat="hrs" />
-                <StatPill label="K's" v1={game.strikeouts[0]} v2={game.strikeouts[1]} stat="ks" />
-              </div>
-            </div>
-
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "white", letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 12 }}>
-                {chartLabel[mode]}
-              </div>
-              <ResponsiveContainer width="100%" height={200}>
-                <LineChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: -20 }}>
-                  <XAxis dataKey="name" tick={{ fontSize: 12, fontWeight: 700, fill: "white" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 12, fill: "white" }} axisLine={false} tickLine={false} allowDecimals={false} />
-                  <Tooltip
-                    formatter={(value) => fmt2(Number(value))}
-                    contentStyle={{ background: "rgba(27, 25, 46, 0.67)", border: "0.5px solid rgba(255,255,255,0.1)", borderRadius: 6, fontSize: 13 }}
-                    labelStyle={{ color: "white", marginBottom: 4, fontSize: 13, fontWeight: 600 }}
-                  />
-                  <Legend wrapperStyle={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.7)", paddingTop: 8 }} />
-                  <Line type="monotone" dataKey={game.awayTeam} stroke={awayTeamColor} strokeWidth={2} dot={{ r: 3, fill: awayTeamColor }} activeDot={{ r: 5 }} />
-                  <Line type="monotone" dataKey={game.homeTeam} stroke={homeTeamColor} strokeWidth={2} dot={{ r: 3, fill: homeTeamColor }} activeDot={{ r: 5 }} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+      <div style={{
+        background: backgroundColor || "rgba(13, 17, 23, 0.85)",
+        border: "0.5px solid rgba(255,255,255,0.08)",
+        borderRadius: 8,
+        padding: "16px 20px",
+      }}>
+        {/* Simplified layout for embedded view */}
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "white", letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 12 }}>
+            Prediction Details
           </div>
-        </td>
-      </tr>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <StatPill label="Score" v1={homeRuns} v2={awayRuns} stat="score" />
+            <StatPill label="Hits" v1={game.hits[0]} v2={game.hits[1]} stat="hits" />
+            <StatPill label="HRs" v1={game.homeruns[0]} v2={game.homeruns[1]} stat="hrs" />
+            <StatPill label="K's" v1={game.strikeouts[0]} v2={game.strikeouts[1]} stat="ks" />
+          </div>
+        </div>
+
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "white", letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 12 }}>
+            {chartLabel[mode]}
+          </div>
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: -20 }}>
+              <XAxis dataKey="name" tick={{ fontSize: 12, fontWeight: 700, fill: "white" }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 12, fill: "white" }} axisLine={false} tickLine={false} allowDecimals={false} />
+              <Tooltip
+                contentStyle={{ background: "rgba(27, 25, 46, 0.67)", border: "0.5px solid rgba(255,255,255,0.1)", borderRadius: 6, fontSize: 13 }}
+                labelStyle={{ color: "white", marginBottom: 4, fontSize: 13, fontWeight: 600 }}
+              />
+              <Legend wrapperStyle={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.7)", paddingTop: 8 }} />
+              <Line type="monotone" dataKey={game.homeTeam} stroke={homeTeamColor} strokeWidth={2} dot={{ r: 3, fill: homeTeamColor }} activeDot={{ r: 5 }} />
+              <Line type="monotone" dataKey={game.awayTeam} stroke={awayTeamColor} strokeWidth={2} dot={{ r: 3, fill: awayTeamColor }} activeDot={{ r: 5 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
     )
   }
 
