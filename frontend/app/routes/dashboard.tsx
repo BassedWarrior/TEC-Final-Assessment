@@ -46,6 +46,7 @@ function TeamCell({ name }: { name: string }) {
     </div>
   )
 }
+
 function ProbCell({ prob, name }: { prob: number; name: string }) {
   return (
     <div style={{ minWidth: 90 }}>
@@ -70,32 +71,32 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null)
 
-useEffect(() => {
-  const loadSchedule = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const data = await fetchSchedule();
-      
-      setScheduleGames(data.games);
-      
-    } catch (err: any) {
-      console.error("Error caught:", err);
-      console.error("Error message:", err.message);
-      console.error("Error stack:", err.stack);
-      setError(err.message || 'Failed to load schedule data');
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  loadSchedule();
-}, []);
+  useEffect(() => {
+    const loadSchedule = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const data = await fetchSchedule();
+
+        setScheduleGames(data.games);
+
+      } catch (err: any) {
+        console.error("Error caught:", err);
+        console.error("Error message:", err.message);
+        console.error("Error stack:", err.stack);
+        setError(err.message || 'Failed to load schedule data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadSchedule();
+  }, []);
 
   const transformedGames: Game[] = scheduleGames.map((game, index) => ({
     id: index,
-    team1: game.homeTeamName, 
+    team1: game.homeTeamName,
     team2: game.awayTeamName,
     prob1: 50, // Placeholder
     prob2: 50, // Placeholder
@@ -112,7 +113,7 @@ useEffect(() => {
   }));
 
   const sorted = [...transformedGames].sort((a, b) => b.prob1 - a.prob1);
-  
+
   const totalLiveGames = scheduleGames.filter(g => g.isLive).length;
   const summaryItems = [
     { label: "Games this week", value: scheduleGames.length.toString() },
@@ -153,7 +154,7 @@ useEffect(() => {
 
   return (
     <PageLayout activePath="/" backgroundImage="/images/bg-dashboard.jpg">
-      <TopBar title = "This week's predictions" />
+      <TopBar title="This week's predictions" />
 
       {/* Table */}
       <div style={{ flex: 1, overflowY: "auto", padding: "20px 28px" }}>
