@@ -8,7 +8,7 @@ Provides:
 - Protected 'me' endpoint
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, Response
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,6 +18,7 @@ from app.db.session import get_db
 from app.models.user import User
 from app.utils.security import verify_password, get_password_hash, create_access_token
 from app.utils.dependencies import get_current_user
+from app.limiter import limiter
 from app.config import settings
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
@@ -62,8 +63,9 @@ class RegisterResponse(UserResponse, TokenResponse):
 
 # ---------- Endpoints ----------
 @router.post("/register", response_model=UserResponse, status_code=201)
+@limiter.limit("10/minute")
 async def register(
-    user_data: UserCreate, response: Response, db: AsyncSession = Depends(get_db)
+    request: Request, user_data: UserCreate, response: Response, db: AsyncSession = Depends(get_db)
 ):
     """
     Create a new user account.
@@ -84,7 +86,7 @@ async def register(
     await db.commit()
     await db.refresh(new_user)
 
-    access_token = create_access_token(data={"sub": str(new_user.id)})
+    access_token = create_access_token(data={"sub": str(new_user.id), "email": new_user.email, "ver": new_user.token_version})
 
     # Set httpOnly cookie (for React frontend)
     response.set_cookie(
@@ -107,7 +109,9 @@ async def register(
 
 
 @router.post("/login", response_model=TokenResponse)
+@limiter.limit("20/minute")
 async def login(
+    request: Request,
     response: Response,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_db),
@@ -130,7 +134,7 @@ async def login(
             detail="Incorrect email or password",
         )
 
-    access_token = create_access_token(data={"sub": str(user.id)})
+    access_token = create_access_token(data={"sub": str(user.id), "email": user.email, "ver": user.token_version})
 
     # Set httpOnly cookie (for React frontend)
     response.set_cookie(
@@ -148,10 +152,16 @@ async def login(
 
 
 @router.post("/logout")
-async def logout(response: Response):
+async def logout(
+    response: Response,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
     """
-    Logout – clears the httpOnly cookie.
+    Logout – bumps token_version to invalidate all existing tokens, then clears the cookie.
     """
+    current_user.token_version += 1
+    await db.commit()
     response.delete_cookie("access_token", path="/")
     return {"message": "Logged out"}
 
