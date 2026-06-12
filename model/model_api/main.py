@@ -1,5 +1,9 @@
+import os
 import sys
 from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
 
 SIM_DIR = Path(__file__).resolve().parent.parent / "simulation"
 sys.path.insert(0, str(SIM_DIR))
@@ -10,6 +14,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from schemas import SimulateRequest, SimulateResponseNested
 
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173").split(",")
+
 app = FastAPI(
     title="MLB Model API",
     description="Monte Carlo simulation of baseball games from stat arrays",
@@ -18,7 +24,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=FRONTEND_URL,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
