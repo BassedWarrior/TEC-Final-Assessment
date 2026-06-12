@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Query
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 import httpx
 
 router = APIRouter(prefix="/schedule", tags=["schedule"])
@@ -52,8 +52,17 @@ async def get_schedule(
             # Simple boolean for live games
             is_live = abstract_game_state in ["Live", "In Progress", "Review"]
 
+            # Split gameDate into date and time using datetime
+            game_datetime = game.get("gameDate", "")
+
+            # Parse the ISO datetime string
+            dt = datetime.fromisoformat(game_datetime.replace('Z', '+00:00'))
+            game_date = dt.strftime("%Y-%m-%d")
+            game_time = dt.strftime("%H:%M")  # 24-hour format
+
             all_games.append({
-                "gameDate": game.get("gameDate"),
+                "gameDate": game_date,
+                "gameTime": game_time,
                 "isLive": is_live,
                 "awayTeamId": away_team["id"],
                 "awayTeamName": away_team["name"],
