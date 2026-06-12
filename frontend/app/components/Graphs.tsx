@@ -20,9 +20,8 @@ export default function Graph({
   isEmbedded?: boolean;
 }) {
   const [mode, setMode] = useState<StatMode>("score")
-  const homeTeamColor = teamMeta[game.homeTeam]?.color ?? "#888"
-  const awayTeamColor = teamMeta[game.awayTeam]?.color ?? "#888"
-
+  const homeTeamColor = teamMeta[game.homeTeam]?.color ?? "var(--home-blue)"
+  const awayTeamColor = teamMeta[game.awayTeam]?.color ?? "var(--away-red)"
   const homeRuns = game.innings.reduce((s, i) => s + i.homeRuns, 0)
   const awayRuns = game.innings.reduce((s, i) => s + i.awayRuns, 0)
 

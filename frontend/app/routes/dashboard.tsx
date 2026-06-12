@@ -193,7 +193,7 @@ export default function Dashboard() {
             <thead>
               <tr style={{ background: "rgba(255,255,255,0.02)", borderBottom: "0.5px solid rgba(255,255,255,0.07)" }}>
                 {["Away", "Win Probability", "Date", "Time", "Home", "Win Probability", "Info"].map((h, i) => (
-                  <th key={i} scope="col" style={{ padding: "12px 14px", fontSize: 16, fontWeight: 600, color: "rgb(255, 255, 255)", textAlign: i >= 6 ? "center" : "left", letterSpacing: ".1em", textTransform: "uppercase", whiteSpace: "nowrap" }}>{h}</th>
+                  <th key={i} scope="col" style={{ padding: "12px 14px", fontSize: 16, fontWeight: 600, color: h == "Home" ? "var(--home-blue)" : h == "Away" ? "var(--away-red)" : "rgb(255, 255, 255)", textAlign: i >= 6 ? "center" : "left", letterSpacing: ".1em", textTransform: "uppercase", whiteSpace: "nowrap" }}>{h}</th>
                 ))}
               </tr>
             </thead>
