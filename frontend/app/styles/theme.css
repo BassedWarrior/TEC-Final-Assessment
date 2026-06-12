@@ -14,6 +14,7 @@
 
   /* Neutrals */
   --bg-dark: #0d1117;
+  --bg-table: rgba(13, 17, 23, 0.63);
   --bg-card: rgba(13, 17, 23, 0.85);
   --border-light: rgba(255, 255, 255, 0.1);
   --text-primary: #f0ede6;

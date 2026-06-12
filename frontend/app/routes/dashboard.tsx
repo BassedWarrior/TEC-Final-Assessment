@@ -188,7 +188,7 @@ export default function Dashboard() {
 
       {/* Table */}
       <div style={{ flex: 1, overflowY: "auto", padding: "20px 28px" }}>
-        <div style={{ background: "rgba(42, 42, 44, 0.69)", borderRadius: 10, border: "0.5px solid rgba(255,255,255,0.07)", overflow: "hidden" }}>
+        <div style={{ background: "var(--bg-table)", borderRadius: 10, border: "0.5px solid rgba(255,255,255,0.07)", overflow: "hidden" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }} aria-label="Game predictions">
             <thead>
               <tr style={{ background: "rgba(255,255,255,0.02)", borderBottom: "0.5px solid rgba(255,255,255,0.07)" }}>
