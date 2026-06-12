@@ -1,6 +1,6 @@
 import { redirect } from "react-router"
 
-const API_URL = import.meta.env.VITE_API_URL
+const API_URL = import.meta.env.VITE_INTERNAL_API_URL ?? import.meta.env.VITE_API_URL
 
 export async function requireAuth(request: Request) {
   const cookieHeader = request.headers.get("Cookie")
