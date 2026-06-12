@@ -1,8 +1,11 @@
 import { useNavigate } from "react-router"
-import { teamMeta, mockGames, type Game, type InningScore } from "../data/mockData"
-import { useState } from "react"
-import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts"
+import { useState, useEffect } from "react"
 import { PageLayout, TopBar, SummaryBar } from "../components/Layout";
+import Graph from "../components/Graphs";
+import { fetchSchedule, type ScheduleGame } from "../api/schedule";
+import React from 'react';
+import { teamNameToAbbr, teamMeta } from "../data/teamMeta";
+import { type Game } from "../data/game";
 
 function probFill(p: number) {
   if (p >= 60) return "#16873a"
@@ -10,10 +13,13 @@ function probFill(p: number) {
   return "#c49710"
 }
 
-
 function TeamCell({ name }: { name: string }) {
-  const meta = teamMeta[name] ?? { abbr: null, color: "#888" }
   const [imgError, setImgError] = useState(false)
+
+  const meta = teamMeta[name] ?? {
+    abbr: teamNameToAbbr[name] ?? null,
+    color: "#888",
+  }
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -40,7 +46,6 @@ function TeamCell({ name }: { name: string }) {
     </div>
   )
 }
-
 function ProbCell({ prob, name }: { prob: number; name: string }) {
   return (
     <div style={{ minWidth: 90 }}>
@@ -58,202 +63,149 @@ function ProbCell({ prob, name }: { prob: number; name: string }) {
 
 type StatMode = "score" | "hits" | "hrs" | "ks"
 
-function ExpandedRow({ game }: { game: Game }) {
-  const [mode, setMode] = useState<StatMode>("score")
-  const team1Color = teamMeta[game.team1]?.color ?? "#888"
-  const team2Color = teamMeta[game.team2]?.color ?? "#888"
-
-  const score1 = game.innings.reduce((s, i) => s + i.team1, 0)
-  const score2 = game.innings.reduce((s, i) => s + i.team2, 0)
-
-  // Build cumulative chart data depending on selected mode
-  const chartData = game.innings.map((ing, idx) => {
-    const prev = game.innings.slice(0, idx)
-    const cum = (key1: keyof InningScore, key2: keyof InningScore) => ({
-      [game.team1]: prev.reduce((s, x) => s + (x[key1] as number), 0) + (ing[key1] as number),
-      [game.team2]: prev.reduce((s, x) => s + (x[key2] as number), 0) + (ing[key2] as number),
-    })
-    return {
-      name: `Inn ${ing.inning}`,
-      ...(mode === "score" ? cum("team1", "team2") :
-          mode === "hits"  ? cum("hits1", "hits2") :
-          mode === "hrs"   ? cum("hrs1",  "hrs2")  :
-                             cum("ks1",   "ks2")),
-    }
-  })
-
-  function StatPill({
-    label, v1, v2, stat,
-  }: {
-    label: string; v1: number; v2: number; stat: StatMode
-  }) {
-    const active = mode === stat
-    return (
-      <div
-        onClick={() => setMode(stat)}
-        style={{
-          flex: 1,
-          background: active ? "rgba(192,30,46,0.15)" : "rgba(255,255,255,0.03)",
-          border: active ? "0.5px solid rgba(192,30,46,0.5)" : "0.5px solid rgba(255,255,255,0.08)",
-          borderRadius: 8, padding: "12px 16px",
-          cursor: "pointer",
-          transition: "all .15s",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: active ? "#f07080" : "white", textTransform: "uppercase", letterSpacing: ".08em" }}>{label}</div>
-          {active && <div style={{ fontSize: 10, fontWeight: 600, color: "#f07080", letterSpacing: ".06em" }}>● ACTIVE</div>}
-        </div>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ fontSize: 30, fontWeight: 700, color: team1Color }}>{v1}</span>
-          <span style={{ fontSize: 18, color: "white" }}>vs</span>
-          <span style={{ fontSize: 30, fontWeight: 700, color: team2Color }}>{v2}</span>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
-          <span style={{ fontSize: 11, fontWeight: 600, color: "white" }}>{game.team1}</span>
-          <span style={{ fontSize: 11, fontWeight: 600, color: "white" }}>{game.team2}</span>
-        </div>
-      </div>
-    )
-  }
-
-  const chartLabel: Record<StatMode, string> = {
-    score: "Score Progression",
-    hits:  "Hits Progression",
-    hrs:   "Home Runs Progression",
-    ks:    "Strikeouts Progression",
-  }
-
-  return (
-    <tr>
-      <td colSpan={8} style={{ padding: "0 14px 10px" }}>
-        <div style={{ background: "rgba(152, 152, 152, 0.13)", border: "0.5px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: "20px 24px", display: "flex", gap: 32 }}>
-
-          {/* Left: stats */}
-          <div style={{ width: 420, flexShrink: 0 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: "white", letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 12 }}>Predicted Stats</div>
-
-            {/* Final score — also a clickable pill */}
-            <div
-              onClick={() => setMode("score")}
-              style={{
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 32,
-                background: mode === "score" ? "rgba(192,30,46,0.15)" : "rgba(255,255,255,0.04)",
-                border: mode === "score" ? "0.5px solid rgba(192,30,46,0.5)" : "0.5px solid rgba(255,255,255,0.08)",
-                borderRadius: 8, padding: "14px 20px", marginBottom: 12,
-                cursor: "pointer", transition: "all .15s",
-              }}
-            >
-              <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: 16, fontWeight: 600, color: "white", marginBottom: 4 }}>{game.team1}</div>
-                <div style={{ fontSize: 45, fontWeight: 900, color: team1Color }}>{score1}</div>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                <div style={{ fontSize: 22, color: "rgba(255,255,255,0.3)" }}>–</div>
-                {mode === "score" && <div style={{ fontSize: 10, fontWeight: 600, color: "#f07080", letterSpacing: ".06em" }}>● ACTIVE</div>}
-              </div>
-              <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: 16, fontWeight: 600, color: "white", marginBottom: 4 }}>{game.team2}</div>
-                <div style={{ fontSize: 45, fontWeight: 900, color: team2Color }}>{score2}</div>
-              </div>
-            </div>
-
-            <div style={{ display: "flex", gap: 10 }}>
-              <StatPill label="Hits" v1={game.hits[0]}       v2={game.hits[1]}       stat="hits" />
-              <StatPill label="HRs"  v1={game.homeruns[0]}   v2={game.homeruns[1]}   stat="hrs"  />
-              <StatPill label="K's"  v1={game.strikeouts[0]} v2={game.strikeouts[1]} stat="ks"   />
-            </div>
-          </div>
-
-          {/* Right: chart */}
-          <div style={{ width: 600, flex: 1, borderRadius: 10 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: "white", letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 12 }}>
-              {chartLabel[mode]}
-            </div>
-            <ResponsiveContainer width="100%" height={180}>
-              <LineChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: -20 }}>
-                <XAxis dataKey="name" tick={{ fontSize: 15, fontWeight: 700, fill: "white" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 15, fill: "white" }} axisLine={false} tickLine={false} allowDecimals={false} />
-                <Tooltip
-                  contentStyle={{ background: "rgba(27, 25, 46, 0.67)", border: "0.5px solid rgba(255,255,255,0.1)", borderRadius: 6, fontSize: 15 }}
-                  labelStyle={{ color: "white", marginBottom: 4, fontSize: 15, fontWeight: 600 }}
-                />
-                <Legend wrapperStyle={{ fontSize: 19, fontWeight: 600, color: "rgba(255,255,255,0.7)", paddingTop: 8 }} />
-                <Line type="monotone" dataKey={game.team1} stroke={team1Color} strokeWidth={2} dot={{ r: 4, fill: team1Color }} activeDot={{ r: 6 }} />
-                <Line type="monotone" dataKey={game.team2} stroke={team2Color} strokeWidth={2} dot={{ r: 4, fill: team2Color }} activeDot={{ r: 6 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-
-        </div>
-      </td>
-    </tr>
-  )
-}
-
 export default function Dashboard() {
   const navigate = useNavigate()
-  const sorted = [...mockGames].sort((a, b) => b.prob1 - a.prob1)
+  const [scheduleGames, setScheduleGames] = useState<ScheduleGame[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null)
 
+useEffect(() => {
+  const loadSchedule = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const data = await fetchSchedule();
+      
+      setScheduleGames(data.games);
+      
+    } catch (err: any) {
+      console.error("Error caught:", err);
+      console.error("Error message:", err.message);
+      console.error("Error stack:", err.stack);
+      setError(err.message || 'Failed to load schedule data');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  loadSchedule();
+}, []);
+
+  const transformedGames: Game[] = scheduleGames.map((game, index) => ({
+    id: index,
+    team1: game.homeTeamName, 
+    team2: game.awayTeamName,
+    prob1: 50, // Placeholder
+    prob2: 50, // Placeholder
+    date: game.gameDate,
+    time: game.gameTime,
+    isLive: game.isLive,
+    isFinal: game.isFinal,
+    innings: [],
+    winner: null,
+    status: game.isLive ? "Live" : game.isFinal ? "Final" : "Scheduled",
+    hits: [0,0],
+    homeruns: [0,0],
+    strikeouts: [0,0]
+  }));
+
+  const sorted = [...transformedGames].sort((a, b) => b.prob1 - a.prob1);
+  
+  const totalLiveGames = scheduleGames.filter(g => g.isLive).length;
   const summaryItems = [
-    { label: "Games this week", value: "6" },
-    { label: "Top confidence", value: "62%" },
-    { label: "Model accuracy", value: "~65%" },
+    { label: "Games this week", value: scheduleGames.length.toString() },
+    { label: "Live games", value: totalLiveGames.toString() },
+    { label: "Model accuracy", value: "~59%" },
     { label: "Games analyzed", value: "2,430" },
   ];
+
+  if (loading) {
+    return (
+      <PageLayout activePath="/" backgroundImage="/images/bg-dashboard.jpg">
+        <TopBar title="This week's predictions" />
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "400px" }}>
+          <div style={{ color: "white", fontSize: 18 }}>Loading schedule...</div>
+        </div>
+        <SummaryBar items={summaryItems} />
+      </PageLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <PageLayout activePath="/" backgroundImage="/images/bg-dashboard.jpg">
+        <TopBar title="This week's predictions" />
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "400px", flexDirection: "column", gap: 16 }}>
+          <div style={{ color: "#ff6b6b", fontSize: 18 }}>{error}</div>
+          <button 
+            onClick={() => window.location.reload()}
+            style={{ padding: "8px 16px", background: "#89082d", border: "none", borderRadius: 4, color: "white", cursor: "pointer" }}
+          >
+            Retry
+          </button>
+        </div>
+        <SummaryBar items={summaryItems} />
+      </PageLayout>
+    );
+  }
 
   return (
     <PageLayout activePath="/" backgroundImage="/images/bg-dashboard.jpg">
       <TopBar title = "This week's predictions" />
 
-        {/* Table */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "20px 28px" }}>
-          <div style={{ background: "rgba(42, 42, 44, 0.69)", borderRadius: 10, border: "0.5px solid rgba(255,255,255,0.07)", overflow: "hidden" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }} aria-label="Game predictions">
-              <thead>
-                <tr style={{ background: "rgba(255,255,255,0.02)", borderBottom: "0.5px solid rgba(255,255,255,0.07)" }}>
-                  {["Team", "Probability", "Date", "Time", "Team 2", "Probability", "Simulate", "Info"].map((h, i) => (
-                    <th key={i} scope="col" style={{ padding: "12px 14px", fontSize: 16, fontWeight: 600, color: "rgb(255, 255, 255)", textAlign: i >= 6 ? "center" : "left", letterSpacing: ".1em", textTransform: "uppercase", whiteSpace: "nowrap" }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {sorted.map(game => {
-                  const isExpanded = expandedId === game.id
-                  return (
-                    <>
-                      <tr key={game.id} style={{ borderBottom: isExpanded ? "none" : "0.5px solid rgba(255,255,255,0.04)" }}>
-                        <td style={{ padding: "14px 14px" }}><TeamCell name={game.team1} /></td>
-                        <td style={{ padding: "14px 14px" }}><ProbCell prob={game.prob1} name={game.team1} /></td>
-                        <td style={{ padding: "14px 14px", fontSize: 14, fontWeight: 700, color: "#f0ede6" }}>{game.date}</td>
-                        <td style={{ padding: "14px 14px", fontSize: 15, color: "rgba(255, 255, 255, 0.89)", fontWeight: 700 }}>{game.time}</td>
-                        <td style={{ padding: "14px 14px" }}><TeamCell name={game.team2} /></td>
-                        <td style={{ padding: "14px 14px" }}><ProbCell prob={game.prob2} name={game.team2} /></td>
-                        <td style={{ padding: "14px 14px", textAlign: "center" }}>
-                          <button onClick={() => navigate(`/game/${game.id}`)}
-                            aria-label={`Run simulation for ${game.team1} vs ${game.team2}`}
-                            style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "7px 13px", background: "rgba(192,30,46,0.12)", border: "0.5px solid rgba(192,30,46,0.45)", borderRadius: 6, color: "#f07080", fontSize: 14, fontWeight: 500, fontFamily: "'DM Sans', sans-serif", cursor: "pointer" }}>
-                            ▶ Run
-                          </button>
-                        </td>
-                        <td style={{ padding: "14px 14px", textAlign: "center" }}>
-                          <button
-                            onClick={() => setExpandedId(isExpanded ? null : game.id)}
-                            aria-label={isExpanded ? "Collapse predictions" : "Expand predictions"}
-                            style={{ width: 30, height: 30, display: "inline-flex", alignItems: "center", justifyContent: "center", background: isExpanded ? "rgba(192,30,46,0.15)" : "rgba(255,255,255,0.04)", border: isExpanded ? "0.5px solid rgba(192,30,46,0.4)" : "2px solid rgba(255,255,255,0.1)", borderRadius: "50%", color: isExpanded ? "#f07080" : "rgba(255, 255, 255, 0.78)", fontSize: 14, fontFamily: "'DM Sans', sans-serif", cursor: "pointer" }}>
-                            {isExpanded ? "▲" : "▼"}
-                          </button>
+      {/* Table */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "20px 28px" }}>
+        <div style={{ background: "rgba(42, 42, 44, 0.69)", borderRadius: 10, border: "0.5px solid rgba(255,255,255,0.07)", overflow: "hidden" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }} aria-label="Game predictions">
+            <thead>
+              <tr style={{ background: "rgba(255,255,255,0.02)", borderBottom: "0.5px solid rgba(255,255,255,0.07)" }}>
+                {["Team", "Probability", "Date", "Time", "Team 2", "Probability", "Info"].map((h, i) => (
+                  <th key={i} scope="col" style={{ padding: "12px 14px", fontSize: 16, fontWeight: 600, color: "rgb(255, 255, 255)", textAlign: i >= 6 ? "center" : "left", letterSpacing: ".1em", textTransform: "uppercase", whiteSpace: "nowrap" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map(game => {
+                const isExpanded = expandedId === game.id
+                return (
+                  <React.Fragment key={game.id}>
+                    <tr style={{ borderBottom: isExpanded ? "none" : "0.5px solid rgba(255,255,255,0.04)" }}>
+                      <td style={{ padding: "14px 14px" }}><TeamCell name={game.team1} /></td>
+                      <td style={{ padding: "14px 14px" }}><ProbCell prob={game.prob1} name={game.team1} /></td>
+                      <td style={{ padding: "14px 14px", fontSize: 14, fontWeight: 700, color: "#f0ede6" }}>{game.date}</td>
+                      <td style={{ padding: "14px 14px", fontSize: 15, color: "rgba(255, 255, 255, 0.89)", fontWeight: 700 }}>{game.time}</td>
+                      <td style={{ padding: "14px 14px" }}><TeamCell name={game.team2} /></td>
+                      <td style={{ padding: "14px 14px" }}><ProbCell prob={game.prob2} name={game.team2} /></td>
+                      <td style={{ padding: "14px 14px", textAlign: "center" }}>
+                        <button
+                          onClick={() => setExpandedId(isExpanded ? null : game.id)}
+                          aria-label={isExpanded ? "Collapse predictions" : "Expand predictions"}
+                          style={{ width: 30, height: 30, display: "inline-flex", alignItems: "center", justifyContent: "center", background: isExpanded ? "rgba(192,30,46,0.15)" : "rgba(255,255,255,0.04)", border: isExpanded ? "0.5px solid rgba(192,30,46,0.4)" : "2px solid rgba(255,255,255,0.1)", borderRadius: "50%", color: isExpanded ? "#f07080" : "rgba(255, 255, 255, 0.78)", fontSize: 14, fontFamily: "'DM Sans', sans-serif", cursor: "pointer" }}>
+                          {isExpanded ? "▲" : "▼"}
+                        </button>
+                      </td>
+                    </tr>
+                    {isExpanded && (
+                      <tr>
+                        <td colSpan={7} style={{ padding: 0 }}>
+                          <Graph 
+                            game={game} 
+                            fullWidth={true}
+                            isEmbedded={true}
+                            backgroundColor="rgba(0,0,0,0.3)"
+                          />
                         </td>
                       </tr>
-                      {isExpanded && <ExpandedRow game={game} />}
-                    </>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+                    )}
+                  </React.Fragment>
+                )
+              })}
+            </tbody>
+          </table>
         </div>
+      </div>
 
       {/* Summary bar */}
       <SummaryBar items={summaryItems} />

@@ -2,6 +2,8 @@ import { useState, useRef } from "react"
 import { PageLayout, TopBar, SummaryBar } from "../components/Layout";
 import { MOCK_BATTERS, MOCK_PITCHERS } from "../data/mockPlayers"
 import type { Batter, Pitcher } from "../data/mockPlayers"
+import Graph from "../components/Graphs";
+import type { Game, InningScore as GameInningScore } from "../data/mockData"
 import type { Route } from "./+types/sandbox"
 import { requireAuth } from "../utils/auth"
 
@@ -17,28 +19,6 @@ type TeamSide = "home" | "away"
 interface TeamLineup {
   batters: (Batter | null)[]   // always 9 slots
   pitchers: (Pitcher | null)[] // at least 1 slot
-}
-
-interface InningScore {
-  inning: number
-  home: number | null
-  away: number | null
-}
-
-interface TeamStats {
-  hits: number | null
-  strikeouts: number | null
-  homeruns: number | null
-}
-
-// ─── Mock scoreboard prediction ───────────────────────────────────────────────
-
-function generateMockScore(): InningScore[] {
-  return Array.from({ length: 9 }, (_, i) => ({
-    inning: i + 1,
-    home: null,
-    away: null,
-  }))
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -210,6 +190,12 @@ function SlotRow({ index, label, player, onDrop, onRemove, onDragStartSlot, onDr
 
 // ─── Team Lineup Table ────────────────────────────────────────────────────────
 
+// ─── Team Lineup Table (Two Column Version) ───────────────────────────────────
+
+// ─── Team Lineup Table (Two Column Version - Equal Width with Pitcher Controls) ───
+
+// ─── Team Lineup Table (with reset button) ───────────────────────────────────
+
 interface TeamTableProps {
   side: TeamSide
   lineup: TeamLineup
@@ -218,11 +204,12 @@ interface TeamTableProps {
   onReorder: (side: TeamSide, section: "batters" | "pitchers", from: number, to: number) => void
   onAddPitcherSlot: (side: TeamSide) => void
   onRemovePitcherSlot: (side: TeamSide) => void
+  onResetTeam: (side: TeamSide) => void  // New prop
   dragOverSlot: { side: TeamSide; section: "batters" | "pitchers"; index: number } | null
   setDragOverSlot: (v: { side: TeamSide; section: "batters" | "pitchers"; index: number } | null) => void
 }
 
-function TeamTable({ side, lineup, onDrop, onRemove, onReorder, onAddPitcherSlot, onRemovePitcherSlot, dragOverSlot, setDragOverSlot }: TeamTableProps) {
+function TeamTable({ side, lineup, onDrop, onRemove, onReorder, onAddPitcherSlot, onRemovePitcherSlot, onResetTeam, dragOverSlot, setDragOverSlot }: TeamTableProps) {
   const reorderFrom = useRef<number | null>(null)
   const reorderSection = useRef<"batters" | "pitchers" | null>(null)
 
@@ -256,194 +243,247 @@ function TeamTable({ side, lineup, onDrop, onRemove, onReorder, onAddPitcherSlot
   }
 
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "rgba(13,17,23,0.75)", border: `0.5px solid rgba(255,255,255,0.1)`, borderRadius: 10, overflow: "hidden" }}>
-      {/* Team header */}
-      <div style={{ padding: "14px 16px", borderBottom: "0.5px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+    <div style={{
+      flex: 1,
+      display: "flex",
+      flexDirection: "column",
+      background: "rgba(13,17,23,0.75)",
+      border: `0.5px solid rgba(255,255,255,0.1)`,
+      borderRadius: 10,
+      overflow: "hidden"
+    }}>
+      {/* Team header with reset button */}
+      <div style={{
+        padding: "14px 16px",
+        borderBottom: "0.5px solid rgba(255,255,255,0.08)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        flexShrink: 0
+      }}>
         <div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: accentColor, letterSpacing: ".08em", textTransform: "uppercase", marginBottom: 2 }}>{label}</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: accentColor, letterSpacing: ".08em", textTransform: "uppercase", marginBottom: 2 }}>
+            {label}
+          </div>
           <div style={{ fontSize: 13, color: "rgba(255,255,255,0.6)" }}>
             {battersFilled}/9 batters · {pitchersFilled}/{lineup.pitchers.length} pitchers
           </div>
         </div>
-        <div style={{ display: "flex", gap: 6 }}>
-          <button onClick={() => onRemovePitcherSlot(side)} disabled={lineup.pitchers.length <= 1}
-            aria-label="Remove pitcher slot"
-            style={{ width: 26, height: 26, borderRadius: 5, background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.12)", color: lineup.pitchers.length <= 1 ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.6)", fontSize: 15, cursor: lineup.pitchers.length <= 1 ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans', sans-serif" }}>−</button>
-          <button onClick={() => onAddPitcherSlot(side)}
-            aria-label="Add pitcher slot"
-            style={{ width: 26, height: 26, borderRadius: 5, background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.6)", fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'DM Sans', sans-serif" }}>+</button>
+
+        {/* Reset button for this team */}
+        <button
+          onClick={() => onResetTeam(side)}
+          aria-label={`Reset ${label} lineup`}
+          style={{
+            padding: "6px 12px",
+            background: "rgba(255,255,255,0.05)",
+            border: "0.5px solid rgba(255,255,255,0.15)",
+            borderRadius: 6,
+            color: "rgba(255,255,255,0.7)",
+            cursor: "pointer",
+            fontFamily: "'DM Sans', sans-serif",
+            fontSize: 12,
+            fontWeight: 500,
+            transition: "all .15s",
+            display: "flex",
+            alignItems: "center",
+            gap: 6
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "rgba(255,255,255,0.1)";
+            e.currentTarget.style.borderColor = "rgba(255,255,255,0.25)";
+            e.currentTarget.style.color = "rgba(255,255,255,0.9)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "rgba(255,255,255,0.05)";
+            e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)";
+            e.currentTarget.style.color = "rgba(255,255,255,0.7)";
+          }}
+        >
+          <span>⟳</span> Reset
+        </button>
+      </div>
+
+      {/* Two column layout - EQUAL WIDTH */}
+      <div style={{
+        flex: 1,
+        display: "flex",
+        gap: 12,
+        padding: "12px 12px",
+        overflow: "hidden",
+        minHeight: 0
+      }}>
+        {/* Batters Column */}
+        <div style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+          background: "rgba(255,255,255,0.02)",
+          borderRadius: 8,
+          border: "0.5px solid rgba(255,255,255,0.05)"
+        }}>
+          <div style={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: "rgba(255, 255, 255, 0.75)",
+            letterSpacing: ".1em",
+            textTransform: "uppercase",
+            padding: "10px 12px",
+            borderBottom: "0.5px solid rgba(255,255,255,0.08)",
+            background: "rgba(255,255,255,0.03)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center"
+          }}>
+            <span>Batting Order</span>
+            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.5)" }}>
+              9 slots
+            </span>
+          </div>
+          <div style={{
+            flex: 1,
+            overflowY: "auto",
+            padding: "8px 8px"
+          }}>
+            {lineup.batters.map((player, i) => (
+              <SlotRow
+                key={i}
+                index={i}
+                label={String(i + 1)}
+                player={player}
+                onDrop={(e, idx) => handleDrop(e, "batters", idx)}
+                onRemove={idx => onRemove(side, "batters", idx)}
+                onDragStartSlot={(e, idx) => handleDragStartSlot(e, "batters", idx)}
+                onDragOverSlot={(e, idx) => handleDragOverSlot(e, "batters", idx)}
+                onDragEndSlot={() => setDragOverSlot(null)}
+                isDragOver={dragOverSlot?.side === side && dragOverSlot?.section === "batters" && dragOverSlot?.index === i}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Pitchers Column with controls in header */}
+        <div style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+          background: "rgba(255,255,255,0.02)",
+          borderRadius: 8,
+          border: "0.5px solid rgba(255,255,255,0.05)"
+        }}>
+          <div style={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: "rgba(255, 255, 255, 0.75)",
+            letterSpacing: ".1em",
+            textTransform: "uppercase",
+            padding: "10px 12px",
+            borderBottom: "0.5px solid rgba(255,255,255,0.08)",
+            background: "rgba(255,255,255,0.03)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center"
+          }}>
+            <span>Pitching Staff</span>
+            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              <span style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", marginRight: 4 }}>
+                {lineup.pitchers.length} slot{lineup.pitchers.length !== 1 ? 's' : ''}
+              </span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemovePitcherSlot(side);
+                }}
+                disabled={lineup.pitchers.length <= 1}
+                aria-label="Remove pitcher slot"
+                style={{
+                  width: 22,
+                  height: 22,
+                  borderRadius: 4,
+                  background: "rgba(255,255,255,0.08)",
+                  border: "0.5px solid rgba(255,255,255,0.15)",
+                  color: lineup.pitchers.length <= 1 ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.8)",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: lineup.pitchers.length <= 1 ? "not-allowed" : "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontFamily: "'DM Sans', sans-serif",
+                  transition: "all .15s"
+                }}
+                onMouseEnter={(e) => {
+                  if (lineup.pitchers.length > 1) {
+                    e.currentTarget.style.background = "rgba(255,255,255,0.15)";
+                    e.currentTarget.style.borderColor = "rgba(255,255,255,0.3)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+                  e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)";
+                }}
+              >
+                −
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAddPitcherSlot(side);
+                }}
+                aria-label="Add pitcher slot"
+                style={{
+                  width: 22,
+                  height: 22,
+                  borderRadius: 4,
+                  background: "rgba(255,255,255,0.08)",
+                  border: "0.5px solid rgba(255,255,255,0.15)",
+                  color: "rgba(255,255,255,0.8)",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontFamily: "'DM Sans', sans-serif",
+                  transition: "all .15s"
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "rgba(255,255,255,0.15)";
+                  e.currentTarget.style.borderColor = "rgba(255,255,255,0.3)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+                  e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)";
+                }}
+              >
+                +
+              </button>
+            </div>
+          </div>
+          <div style={{
+            flex: 1,
+            overflowY: "auto",
+            padding: "8px 8px"
+          }}>
+            {lineup.pitchers.map((player, i) => (
+              <SlotRow
+                key={i}
+                index={i}
+                label="P"
+                player={player}
+                onDrop={(e, idx) => handleDrop(e, "pitchers", idx)}
+                onRemove={idx => onRemove(side, "pitchers", idx)}
+                onDragStartSlot={(e, idx) => handleDragStartSlot(e, "pitchers", idx)}
+                onDragOverSlot={(e, idx) => handleDragOverSlot(e, "pitchers", idx)}
+                onDragEndSlot={() => setDragOverSlot(null)}
+                isDragOver={dragOverSlot?.side === side && dragOverSlot?.section === "pitchers" && dragOverSlot?.index === i}
+              />
+            ))}
+          </div>
         </div>
       </div>
-
-      <div style={{ flex: 1, overflowY: "auto", padding: "12px 12px" }}>
-        {/* Batters section */}
-        <div style={{ fontSize: 13, fontWeight: 600, color: "rgba(255, 255, 255, 0.75)", letterSpacing: ".1em", textTransform: "uppercase", marginBottom: 8, paddingLeft: 4 }}>Batting Order</div>
-        {lineup.batters.map((player, i) => (
-          <SlotRow
-            key={i} index={i} label={String(i + 1)}
-            player={player}
-            onDrop={(e, idx) => handleDrop(e, "batters", idx)}
-            onRemove={idx => onRemove(side, "batters", idx)}
-            onDragStartSlot={(e, idx) => handleDragStartSlot(e, "batters", idx)}
-            onDragOverSlot={(e, idx) => handleDragOverSlot(e, "batters", idx)}
-            onDragEndSlot={() => setDragOverSlot(null)}
-            isDragOver={dragOverSlot?.side === side && dragOverSlot?.section === "batters" && dragOverSlot?.index === i}
-          />
-        ))}
-
-        {/* Pitchers section */}
-        <div style={{ fontSize: 13, fontWeight: 600, color: "rgba(255, 255, 255, 0.75)", letterSpacing: ".1em", textTransform: "uppercase", margin: "14px 0 8px", paddingLeft: 4 }}>Pitching Staff</div>
-        {lineup.pitchers.map((player, i) => (
-          <SlotRow
-            key={i} index={i} label="P"
-            player={player}
-            onDrop={(e, idx) => handleDrop(e, "pitchers", idx)}
-            onRemove={idx => onRemove(side, "pitchers", idx)}
-            onDragStartSlot={(e, idx) => handleDragStartSlot(e, "pitchers", idx)}
-            onDragOverSlot={(e, idx) => handleDragOverSlot(e, "pitchers", idx)}
-            onDragEndSlot={() => setDragOverSlot(null)}
-            isDragOver={dragOverSlot?.side === side && dragOverSlot?.section === "pitchers" && dragOverSlot?.index === i}
-          />
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// ─── Scoreboard ───────────────────────────────────────────────────────────────
-
-interface ScoreboardProps {
-  innings: InningScore[]
-  homeTotal: number
-  awayTotal: number
-  simulated: boolean
-  homeName: string
-  awayName: string
-}
-
-function Scoreboard({ innings, homeTotal, awayTotal, simulated, homeName, awayName }: ScoreboardProps) {
-  const cellStyle = (highlight?: boolean): React.CSSProperties => ({
-    minWidth: 36, textAlign: "center", padding: "8px 6px",
-    fontSize: 15, fontWeight: highlight ? 700 : 500,
-    color: highlight ? "#f0ede6" : "rgba(255, 255, 255, 0.72)",
-    borderRight: "0.5px solid rgba(255,255,255,0.07)",
-  })
-
-  return (
-    <div style={{ background: "rgba(13, 17, 23, 0.74)", border: "0.5px solid rgba(255,255,255,0.1)", borderRadius: 10, overflow: "hidden", flexShrink: 0 }}>
-      {/* Scoreboard title */}
-      <div style={{ padding: "12px 18px", borderBottom: "0.5px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ fontSize: 15, fontWeight: 600, color: "rgba(255, 255, 255, 0.82)", letterSpacing: ".1em", textTransform: "uppercase" }}>Scoreboard</div>
-        {simulated && <div style={{ fontSize: 13, fontWeight: 600, color: "#4ade80", letterSpacing: ".06em" }}>● SIMULATED</div>}
-        {!simulated && <div style={{ fontSize: 13, color: "rgba(255, 255, 255, 0.6)", fontStyle: "italic" }}>Run simulation to see predictions</div>}
-      </div>
-
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 500 }}>
-          <thead>
-            <tr style={{ background: "rgba(255,255,255,0.02)", borderBottom: "0.5px solid rgba(255,255,255,0.07)" }}>
-              <th style={{ padding: "8px 18px", fontSize: 15, fontWeight: 600, color: "rgba(255, 255, 255, 0.75)", textAlign: "left", minWidth: 80, borderRight: "0.5px solid rgba(255,255,255,0.07)" }}>Team</th>
-              {innings.map(i => (
-                <th key={i.inning} style={{ minWidth: 36, textAlign: "center", padding: "8px 6px", fontSize: 12, fontWeight: 600, color: "rgba(255, 255, 255, 0.66)", borderRight: "0.5px solid rgba(255,255,255,0.07)" }}>{i.inning}</th>
-              ))}
-              <th style={{ minWidth: 44, textAlign: "center", padding: "8px 10px", fontSize: 13, fontWeight: 700, color: "rgba(255, 255, 255, 0.76)" }}>R</th>
-            </tr>
-          </thead>
-          <tbody>
-            {/* Away row */}
-            <tr style={{ borderBottom: "0.5px solid rgba(255,255,255,0.06)" }}>
-              <td style={{ padding: "8px 18px", fontSize: 15, fontWeight: 600, color: "#e84057", borderRight: "0.5px solid rgba(255,255,255,0.07)", whiteSpace: "nowrap" }}> {awayName}</td>
-              {innings.map(i => (
-                <td key={i.inning} style={cellStyle()}>{simulated && i.away !== null ? i.away : <span style={{ color: "rgba(255,255,255,0.15)" }}>—</span>}</td>
-              ))}
-              <td style={{ textAlign: "center", padding: "8px 10px", fontSize: 15, fontWeight: 800, color: simulated ? (awayTotal > homeTotal ? "#4ade80" : "#f0ede6") : "rgba(255, 255, 255, 0.5)" }}>
-                {simulated ? awayTotal : "—"}
-              </td>
-            </tr>
-            {/* Home row */}
-            <tr>
-              <td style={{ padding: "8px 18px", fontSize: 15, fontWeight: 600, color: "#3b82f6", borderRight: "0.5px solid rgba(255,255,255,0.07)", whiteSpace: "nowrap" }}> {homeName}</td>
-              {innings.map(i => (
-                <td key={i.inning} style={cellStyle()}>{simulated && i.home !== null ? i.home : <span style={{ color: "rgba(255,255,255,0.15)" }}>—</span>}</td>
-              ))}
-              <td style={{ textAlign: "center", padding: "8px 10px", fontSize: 15, fontWeight: 800, color: simulated ? (homeTotal > awayTotal ? "#4ade80" : "#f0ede6") : "rgba(255, 255, 255, 0.5)" }}>
-                {simulated ? homeTotal : "—"}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  )
-}
-
-// ─── Stats Bar ────────────────────────────────────────────────────────────────
-
-interface StatsBarProps {
-  homeStats: TeamStats
-  awayStats: TeamStats
-  simulated: boolean
-  homeName: string
-  awayName: string
-}
-
-function StatsBar({ homeStats, awayStats, simulated, homeName, awayName }: StatsBarProps) {
-  const stats: { key: keyof TeamStats; label: string }[] = [
-    { key: "hits",       label: "Hits" },
-    { key: "strikeouts", label: "Strikeouts" },
-    { key: "homeruns",   label: "Home Runs" },
-  ]
-
-  function statColor(home: number | null, away: number | null, key: keyof TeamStats, side: "home" | "away") {
-    if (home === null || away === null) return "#f0ede6"
-    const isHome = side === "home"
-    const mine = isHome ? home : away
-    const theirs = isHome ? away : home
-    if (mine > theirs) return "#4ade80"
-    if (mine < theirs) return "#f87171"
-    return "#f0ede6"
-  }
-
-  return (
-    <div style={{ background: "rgba(13,17,23,0.74)", border: "0.5px solid rgba(255,255,255,0.1)", borderRadius: 10, overflow: "hidden", flexShrink: 0 }}>
-      <div style={{ padding: "10px 18px", borderBottom: "0.5px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ fontSize: 15, fontWeight: 600, color: "rgba(255,255,255,0.82)", letterSpacing: ".1em", textTransform: "uppercase" }}>Team Stats</div>
-        {!simulated && <div style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", fontStyle: "italic" }}>Run simulation to see stats</div>}
-      </div>
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
-        <thead>
-          <tr style={{ background: "rgba(255,255,255,0.02)", borderBottom: "0.5px solid rgba(255,255,255,0.07)" }}>
-            <th style={{ padding: "8px 18px", fontSize: 15, fontWeight: 600, color: "rgba(255, 255, 255, 0.7)", textAlign: "left", borderRight: "0.5px solid rgba(255,255,255,0.07)" }}>Team</th>
-            {stats.map(s => (
-              <th key={s.key} style={{ padding: "8px 14px", fontSize: 15, fontWeight: 600, color: "rgba(255, 255, 255, 0.75)", textAlign: "center", borderRight: "0.5px solid rgba(255,255,255,0.07)" }}>{s.label}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {(["away", "home"] as const).map(side => {
-            const teamStats = side === "home" ? homeStats : awayStats
-            const otherStats = side === "home" ? awayStats : homeStats
-            const name = side === "home" ? homeName : awayName
-            const color = side === "home" ? "#3b82f6" : "#e84057"
-            return (
-              <tr key={side} style={{ borderBottom: side === "away" ? "0.5px solid rgba(255,255,255,0.06)" : "none" }}>
-                <td style={{ padding: "10px 18px", fontSize: 15, fontWeight: 600, color, borderRight: "0.5px solid rgba(255,255,255,0.07)", whiteSpace: "nowrap" }}>
-                {name}
-                </td>
-                {stats.map(s => {
-                  const val = teamStats[s.key]
-                  const otherVal = otherStats[s.key]
-                  return (
-                    <td key={s.key} style={{ padding: "10px 14px", textAlign: "center", fontSize: 15, fontWeight: 700, color: simulated ? statColor(homeStats[s.key], awayStats[s.key], s.key, side) : "rgba(255,255,255,0.2)", borderRight: "0.5px solid rgba(255,255,255,0.07)" }}>
-                      {simulated && val !== null ? val : <span style={{ fontSize: 13, color: "rgba(255,255,255,0.15)" }}>—</span>}
-                    </td>
-                  )
-                })}
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
     </div>
   )
 }
@@ -457,22 +497,99 @@ function emptyLineup(): TeamLineup {
   }
 }
 
+// Helper to generate mock game data for the Graph component
+function generateMockGame(homeLineup: TeamLineup, awayLineup: TeamLineup): Game | null {
+  // Get team names from first batter or fallback
+  const homeBatter = homeLineup.batters.find(b => b !== null)
+  const awayBatter = awayLineup.batters.find(b => b !== null)
+
+  if (!homeBatter || !awayBatter) return null
+
+  const homeTeam = homeBatter.team
+  const awayTeam = awayBatter.team
+
+  // Generate mock innings (9 innings)
+  const innings: GameInningScore[] = Array.from({ length: 9 }, (_, i) => ({
+    inning: i + 1,
+    team1: Math.random() < 0.35 ? Math.floor(Math.random() * 3) : 0,
+    team2: Math.random() < 0.35 ? Math.floor(Math.random() * 3) : 0,
+    hits1: Math.floor(Math.random() * 4),
+    hits2: Math.floor(Math.random() * 4),
+    hrs1: Math.floor(Math.random() * 2),
+    hrs2: Math.floor(Math.random() * 2),
+    ks1: Math.floor(Math.random() * 3),
+    ks2: Math.floor(Math.random() * 3),
+  }))
+
+  // Calculate totals
+  const totalHits1 = innings.reduce((sum, inn) => sum + inn.hits1, 0)
+  const totalHits2 = innings.reduce((sum, inn) => sum + inn.hits2, 0)
+  const totalHrs1 = innings.reduce((sum, inn) => sum + inn.hrs1, 0)
+  const totalHrs2 = innings.reduce((sum, inn) => sum + inn.hrs2, 0)
+  const totalKs1 = innings.reduce((sum, inn) => sum + inn.ks1, 0)
+  const totalKs2 = innings.reduce((sum, inn) => sum + inn.ks2, 0)
+
+  return {
+    id: 1,
+    team1: awayTeam, // Note: Graph expects team1 as first argument
+    team2: homeTeam,
+    innings: innings,
+    hits: [totalHits1, totalHits2] as [number, number],
+    homeruns: [totalHrs1, totalHrs2] as [number, number],
+    strikeouts: [totalKs1, totalKs2] as [number, number],
+    prob1: 45,
+    prob2: 55,
+    date: "June 10",
+    time: "8:00 PM"
+  }
+}
+
 export default function Sandbox() {
   const [home, setHome] = useState<TeamLineup>(emptyLineup())
   const [away, setAway] = useState<TeamLineup>(emptyLineup())
-  const [innings, setInnings] = useState<InningScore[]>(generateMockScore())
-  const [simulated, setSimulated] = useState(false)
-  const [simulating, setSimulating] = useState(false)
   const [poolSearch, setPoolSearch] = useState("")
   const [poolTab, setPoolTab] = useState<"batter" | "pitcher">("batter")
   const [dragOverSlot, setDragOverSlot] = useState<{ side: TeamSide; section: "batters" | "pitchers"; index: number } | null>(null)
-  const [homeStats, setHomeStats] = useState<TeamStats>({ hits: null, strikeouts: null, homeruns: null })
-  const [awayStats, setAwayStats] = useState<TeamStats>({ hits: null, strikeouts: null, homeruns: null })
+  const [gameData, setGameData] = useState<Game | null>(null)
+  const [isSimulating, setIsSimulating] = useState(false)
+  const [hasSimulated, setHasSimulated] = useState(false)
   const dragPayload = useRef<{ player: Batter | Pitcher; type: "batter" | "pitcher" } | null>(null)
 
-  // Team name derived from first filled batter's team, fallback to label
-  const homeName = "Home"
-  const awayName = "Away"
+  // Check if both teams have complete lineups
+  const isLineupComplete = () => {
+    const homeBattersCount = home.batters.filter(Boolean).length
+    const awayBattersCount = away.batters.filter(Boolean).length
+    const homePitchersCount = home.pitchers.filter(Boolean).length
+    const awayPitchersCount = away.pitchers.filter(Boolean).length
+
+    return homeBattersCount === 9 &&
+           awayBattersCount === 9 &&
+           homePitchersCount >= 1 &&
+           awayPitchersCount >= 1
+  }
+
+  const lineupComplete = isLineupComplete()
+
+  // Update game data whenever lineups change
+  const updateGameData = () => {
+    // Only auto-update if we haven't simulated yet, or reset simulation state
+    if (!hasSimulated) {
+      const mockGame = generateMockGame(home, away)
+      setGameData(mockGame)
+    }
+  }
+
+  // ── Reset individual team ───────────────────────────────────────────────────
+  function handleResetTeam(side: TeamSide) {
+    const empty = emptyLineup()
+    if (side === "home") {
+      setHome(empty)
+    } else {
+      setAway(empty)
+    }
+    setHasSimulated(false) // Reset simulation flag when lineups change
+    updateGameData()
+  }
 
   // ── Drag from pool ──────────────────────────────────────────────────────────
   function handlePoolDragStart(e: React.DragEvent, player: Batter | Pitcher, type: "batter" | "pitcher") {
@@ -486,12 +603,11 @@ export default function Sandbox() {
     setDragOverSlot(null)
 
     const isReorder = e.dataTransfer.getData("reorder")
-    if (isReorder) return // handled inside TeamTable
+    if (isReorder) return
 
     if (!dragPayload.current) return
     const { player, type } = dragPayload.current
 
-    // Type guard: only batters in batting order, only pitchers in pitching staff
     if (section === "batters" && type !== "batter") return
     if (section === "pitchers" && type !== "pitcher") return
 
@@ -502,6 +618,8 @@ export default function Sandbox() {
       return updated
     })
     dragPayload.current = null
+    setHasSimulated(false) // Reset simulation flag when lineups change
+    updateGameData()
   }
 
   // ── Remove from slot ────────────────────────────────────────────────────────
@@ -512,7 +630,8 @@ export default function Sandbox() {
       updated[section][index] = null
       return updated
     })
-    setSimulated(false)
+    setHasSimulated(false) // Reset simulation flag when lineups change
+    updateGameData()
   }
 
   // ── Reorder within a section ────────────────────────────────────────────────
@@ -526,13 +645,16 @@ export default function Sandbox() {
       arr.splice(to, 0, item)
       return { ...prev, [section]: arr }
     })
-    setSimulated(false)
+    setHasSimulated(false) // Reset simulation flag when lineups change
+    updateGameData()
   }
 
   // ── Add / remove pitcher slots ──────────────────────────────────────────────
   function handleAddPitcherSlot(side: TeamSide) {
     const setter = side === "home" ? setHome : setAway
     setter(prev => ({ ...prev, pitchers: [...prev.pitchers, null] }))
+    setHasSimulated(false) // Reset simulation flag when lineups change
+    updateGameData()
   }
 
   function handleRemovePitcherSlot(side: TeamSide) {
@@ -541,134 +663,189 @@ export default function Sandbox() {
       if (prev.pitchers.length <= 1) return prev
       return { ...prev, pitchers: prev.pitchers.slice(0, -1) }
     })
+    setHasSimulated(false) // Reset simulation flag when lineups change
+    updateGameData()
   }
 
-  // ── Simulate ────────────────────────────────────────────────────────────────
-  function canSimulate() {
-    const homeBatters = home.batters.filter(Boolean).length
-    const awayBatters = away.batters.filter(Boolean).length
-    const homePitchers = home.pitchers.filter(Boolean).length
-    const awayPitchers = away.pitchers.filter(Boolean).length
-    return homeBatters >= 1 && awayBatters >= 1 && homePitchers >= 1 && awayPitchers >= 1
+  // ── Run Simulation ──────────────────────────────────────────────────────────
+  async function handleRunSimulation() {
+    if (!lineupComplete) return
+
+    setIsSimulating(true)
+
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 1500))
+
+    // Generate fresh mock data for the simulation
+    const simulatedGame = generateMockGame(home, away)
+    setGameData(simulatedGame)
+    setHasSimulated(true)
+    setIsSimulating(false)
   }
 
-  async function handleSimulate() {
-    if (!canSimulate()) return
-    setSimulating(true)
-    setSimulated(false)
+  const homeBattersFilled = home.batters.filter(Boolean).length
+  const awayBattersFilled = away.batters.filter(Boolean).length
+  const homePitchersFilled = home.pitchers.filter(Boolean).length
+  const awayPitchersFilled = away.pitchers.filter(Boolean).length
 
-    // Mock delay simulating API call — replace with real model call
-    await new Promise(r => setTimeout(r, 1200))
-
-    const mockInnings: InningScore[] = Array.from({ length: 9 }, (_, i) => ({
-      inning: i + 1,
-      home: Math.random() < 0.35 ? Math.floor(Math.random() * 3) : 0,
-      away: Math.random() < 0.35 ? Math.floor(Math.random() * 3) : 0,
-    }))
-    setInnings(mockInnings)
-    setHomeStats({
-      hits:       Math.floor(Math.random() * 10) + 3,
-      strikeouts: Math.floor(Math.random() * 10) + 4,
-      homeruns:   Math.floor(Math.random() * 4),
-    })
-    setAwayStats({
-      hits:       Math.floor(Math.random() * 10) + 3,
-      strikeouts: Math.floor(Math.random() * 10) + 4,
-      homeruns:   Math.floor(Math.random() * 4),
-    })
-    setSimulated(true)
-    setSimulating(false)
-  }
-
-  function handleReset() {
-    setHome(emptyLineup())
-    setAway(emptyLineup())
-    setInnings(generateMockScore())
-    setHomeStats({ hits: null, strikeouts: null, homeruns: null })
-    setAwayStats({ hits: null, strikeouts: null, homeruns: null })
-    setSimulated(false)
-    dragPayload.current = null
-  }
-
-  const homeTotal = innings.reduce((s, i) => s + (i.home ?? 0), 0)
-  const awayTotal = innings.reduce((s, i) => s + (i.away ?? 0), 0)
-
-  const readyToSim = canSimulate()
+  const missingBatters = (9 - homeBattersFilled) + (9 - awayBattersFilled)
+  const missingPitchers = (homePitchersFilled === 0 ? 1 : 0) + (awayPitchersFilled === 0 ? 1 : 0)
 
   return (
     <PageLayout activePath="/sandbox" backgroundImage="/images/bg-sandbox.jpg">
-        {/* Topbar */}
-        <TopBar title="Sandbox" />
+      <TopBar title="Sandbox" />
 
-        {/* Hint bar */}
-        {!readyToSim && (
-          <div style={{ padding: "10px 24px", background: "rgba(192, 30, 46, 0.27)", borderBottom: "0.5px solid rgba(192,30,46,0.15)", fontSize: 15, color: "rgb(245, 233, 233)" }}>
-            Add at least 1 batter and 1 pitcher to each team to run the simulation.
-          </div>
-        )}
+      <div style={{ flex: 1, display: "flex", overflow: "hidden", padding: "16px 16px 16px 16px", gap: 12 }}>
+        {/* Player Pool */}
+        <div style={{ width: 220, flexShrink: 0 }}>
+          <PlayerPool
+            search={poolSearch}
+            onSearchChange={setPoolSearch}
+            tab={poolTab}
+            onTabChange={setPoolTab}
+            onDragStart={handlePoolDragStart}
+          />
+        </div>
 
-        {/* Main content area */}
-        <div style={{ flex: 1, display: "flex", overflow: "hidden", padding: "16px 16px 16px 16px", gap: 12 }}>
-          {/* Player Pool */}
-          <div style={{ width: 220, flexShrink: 0 }}>
-            <PlayerPool
-              search={poolSearch}
-              onSearchChange={setPoolSearch}
-              tab={poolTab}
-              onTabChange={setPoolTab}
-              onDragStart={handlePoolDragStart}
+        {/* Center: lineups + graph */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 12, overflow: "hidden" }}>
+
+          {/* Team tables side by side */}
+          <div style={{ flex: 1, display: "flex", gap: 12, overflow: "hidden", minHeight: 0 }}>
+            <TeamTable
+              side="away"
+              lineup={away}
+              onDrop={handleDrop}
+              onRemove={handleRemove}
+              onReorder={handleReorder}
+              onAddPitcherSlot={handleAddPitcherSlot}
+              onRemovePitcherSlot={handleRemovePitcherSlot}
+              onResetTeam={handleResetTeam}
+              dragOverSlot={dragOverSlot}
+              setDragOverSlot={setDragOverSlot}
+            />
+            <TeamTable
+              side="home"
+              lineup={home}
+              onDrop={handleDrop}
+              onRemove={handleRemove}
+              onReorder={handleReorder}
+              onAddPitcherSlot={handleAddPitcherSlot}
+              onRemovePitcherSlot={handleRemovePitcherSlot}
+              onResetTeam={handleResetTeam}
+              dragOverSlot={dragOverSlot}
+              setDragOverSlot={setDragOverSlot}
             />
           </div>
 
-          {/* Center: lineups + scoreboard */}
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 12, overflow: "hidden" }}>
-
-            {/* Scoreboard */}
-            <Scoreboard
-              innings={innings}
-              homeTotal={homeTotal}
-              awayTotal={awayTotal}
-              simulated={simulated}
-              homeName={homeName}
-              awayName={awayName}
-            />
-
-            {/* Team stats */}
-            <StatsBar
-              homeStats={homeStats}
-              awayStats={awayStats}
-              simulated={simulated}
-              homeName={homeName}
-              awayName={awayName}
-            />
-
-            {/* Team tables side by side */}
-            <div style={{ flex: 1, display: "flex", gap: 12, overflow: "hidden" }}>
-              <TeamTable
-                side="away"
-                lineup={away}
-                onDrop={handleDrop}
-                onRemove={handleRemove}
-                onReorder={handleReorder}
-                onAddPitcherSlot={handleAddPitcherSlot}
-                onRemovePitcherSlot={handleRemovePitcherSlot}
-                dragOverSlot={dragOverSlot}
-                setDragOverSlot={setDragOverSlot}
-              />
-              <TeamTable
-                side="home"
-                lineup={home}
-                onDrop={handleDrop}
-                onRemove={handleRemove}
-                onReorder={handleReorder}
-                onAddPitcherSlot={handleAddPitcherSlot}
-                onRemovePitcherSlot={handleRemovePitcherSlot}
-                dragOverSlot={dragOverSlot}
-                setDragOverSlot={setDragOverSlot}
-              />
-            </div>
+          {/* Graph Area with Simulation Button */}
+          <div style={{ flexShrink: 0 }}>
+            {lineupComplete ? (
+              <>
+                {hasSimulated && gameData ? (
+                  <Graph
+                    game={gameData}
+                    backgroundColor="rgba(13,17,23,0.85)"
+                    fullWidth={true}
+                    isEmbedded={false}  // Or omit this prop as it defaults to false
+                  />
+                ) : (
+                  <div style={{
+                    background: "rgba(13,17,23,0.74)",
+                    border: "0.5px solid rgba(255,255,255,0.1)",
+                    borderRadius: 10,
+                    padding: "40px 20px",
+                    textAlign: "center",
+                  }}>
+                    <div style={{ marginBottom: 20 }}>
+                      <div style={{ fontSize: 18, fontWeight: 600, color: "rgba(255,255,255,0.8)", marginBottom: 8 }}>
+                        Ready to Simulate!
+                      </div>
+                      <div style={{ fontSize: 14, color: "rgba(255,255,255,0.6)" }}>
+                        Both teams have complete lineups. Click the button below to run the simulation.
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleRunSimulation}
+                      disabled={isSimulating}
+                      style={{
+                        padding: "12px 32px",
+                        background: "linear-gradient(135deg, rgba(192,30,46,0.9) 0%, rgba(192,30,46,0.7) 100%)",
+                        border: "0.5px solid rgba(192,30,46,0.5)",
+                        borderRadius: 8,
+                        color: "white",
+                        cursor: isSimulating ? "wait" : "pointer",
+                        fontFamily: "'DM Sans', sans-serif",
+                        fontSize: 16,
+                        fontWeight: 600,
+                        transition: "all .2s",
+                        opacity: isSimulating ? 0.7 : 1,
+                        transform: isSimulating ? "none" : "translateY(-1px)",
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isSimulating) {
+                          e.currentTarget.style.background = "linear-gradient(135deg, rgba(192,30,46,1) 0%, rgba(192,30,46,0.85) 100%)";
+                          e.currentTarget.style.transform = "translateY(-2px)";
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isSimulating) {
+                          e.currentTarget.style.background = "linear-gradient(135deg, rgba(192,30,46,0.9) 0%, rgba(192,30,46,0.7) 100%)";
+                          e.currentTarget.style.transform = "translateY(-1px)";
+                        }
+                      }}
+                    >
+                      {isSimulating ? (
+                        <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          Simulating...
+                        </span>
+                      ) : (
+                        <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          Run Simulation
+                        </span>
+                      )}
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div style={{
+                background: "rgba(13,17,23,0.74)",
+                border: "0.5px solid rgba(255,255,255,0.1)",
+                borderRadius: 10,
+                padding: "40px 20px",
+                textAlign: "center",
+              }}>
+                <div style={{ fontSize: 15, color: "rgba(255,255,255,0.6)", marginBottom: 12 }}>
+                  Complete both lineups to run simulation
+                </div>
+                <div style={{ display: "flex", gap: 20, justifyContent: "center", fontSize: 13 }}>
+                  {homeBattersFilled !== 9 && (
+                    <div style={{ color: "#f07080" }}>
+                      Home needs {9 - homeBattersFilled} more batter{9 - homeBattersFilled !== 1 ? 's' : ''}
+                    </div>
+                  )}
+                  {awayBattersFilled !== 9 && (
+                    <div style={{ color: "#f07080" }}>
+                      Away needs {9 - awayBattersFilled} more batter{9 - awayBattersFilled !== 1 ? 's' : ''}
+                    </div>
+                  )}
+                  {homePitchersFilled === 0 && (
+                    <div style={{ color: "#f07080" }}>
+                      Home needs at least 1 pitcher
+                    </div>
+                  )}
+                  {awayPitchersFilled === 0 && (
+                    <div style={{ color: "#f07080" }}>
+                      Away needs at least 1 pitcher
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
+      </div>
     </PageLayout>
   )
 }

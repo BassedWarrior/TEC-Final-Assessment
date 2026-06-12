@@ -5,3 +5,10 @@
 # React Router
 /.react-router/
 /build/
+
+# Vite
+/.vite/
+
+# PNPM
+pnpm-lock.yaml
+pnpm-workspace.yaml
