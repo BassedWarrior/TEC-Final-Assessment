@@ -1,11 +1,9 @@
 import { useState, useEffect, useRef } from "react"
 import { PageLayout, TopBar, SummaryBar } from "../components/Layout";
-import type { Batter, Pitcher } from "../data/mockPlayers"
 import { fetchPlayerStats } from "../api/playerStats"
 import { teamNameToAbbr } from "../data/teamMeta"
 import { runSimulation, matchToGame, type SimulateRequest } from "../api/simulate"
 import Graph from "../components/Graphs";
-import type { Game } from "../data/mockData"
 import type { Route } from "./+types/sandbox"
 import { requireAuth } from "../utils/auth"
 

@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from "react"
 import { PageLayout, TopBar, SummaryBar } from "../components/Layout"
-import type { Batter, Pitcher } from "../data/mockPlayers"
 import { fetchPlayerStats, type PlayerStats as APIPlayerStats } from "../api/playerStats";
 import { teamNameToAbbr, teamMeta } from "../data/teamMeta";
 
@@ -181,7 +180,6 @@ function DetailPanel({ player, tab, onClose }: { player: Batter | Pitcher | null
         </button>
       </div>
 
-      {/* Core stats — only uses fields that exist in mockPlayers.ts */}
       <div style={{ padding: 16, borderBottom: "0.5px solid rgba(255,255,255,0.05)" }}>
         <div style={{ fontSize: 14, fontWeight: 600, color: "rgba(255, 255, 255, 0.83)", letterSpacing: ".12em", textTransform: "uppercase", marginBottom: 10 }}>Core Stats</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
