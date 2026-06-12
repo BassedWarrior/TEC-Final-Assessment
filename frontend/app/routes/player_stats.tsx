@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo } from "react"
 import { PageLayout, TopBar, SummaryBar } from "../components/Layout"
 import { MOCK_BATTERS, MOCK_PITCHERS, TEAMS } from "../data/mockPlayers"
 import type { Batter, Pitcher } from "../data/mockPlayers"
+import { fetchPlayerStats, type PlayerStats as APIPlayerStats } from "../api/playerStats";
+import { teamNameToAbbr, teamMeta } from "../data/teamMeta";
 
 type Tab = "batter" | "pitcher"
 type SortKey = "name" | "pa" | "avg" | "obp" | "slg" | "iso" | "k_rate" | "bb_rate" | "status" | "stand"
@@ -212,6 +214,73 @@ export default function Statistics() {
   const [sortKey, setSortKey] = useState<SortKey>("avg")
   const [sortDir, setSortDir] = useState<SortDir>("desc")
   const [selected, setSelected] = useState<Batter | Pitcher | null>(null)
+  const [allBatters, setAllBatters] = useState<Batter[]>([])
+  const [allPitchers, setAllPitchers] = useState<Pitcher[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const loadPlayerStats = async () => {
+      try {
+        setLoading(true);
+        const data = await fetchPlayerStats();
+        
+        // Filter and transform batters
+        const battersData: Batter[] = data
+          .filter(player => player.is_batter === true)
+          .map(player => ({
+            id: player.id,
+            name: player.name,
+            mlbamId: player.id,
+            pa: player.pa_count,
+            avg: Number(player.avg.toFixed(3)),
+            obp: Number(player.obp.toFixed(3)),
+            slg: Number(player.slg.toFixed(3)),
+            iso: Number(player.iso.toFixed(3)),
+            k_rate: Number((player.k_rate * 100).toFixed(1)),
+            bb_rate: Number((player.bb_rate * 100).toFixed(1)),
+            hr_rate: Number((player.hr_rate * 100).toFixed(1)),
+            stand: player.hand === "L" ? "L" : player.hand === "R" ? "R" : "S",
+            team: "MLB",
+            teamAbbr: teamNameToAbbr["MLB"] ?? null,
+            teamColor: "#888888",
+            is_rookie: player.is_rookie === "1",
+          }));
+    
+        const pitchersData: Pitcher[] = data
+          .filter(player => player.is_batter === false)
+          .map(player => ({
+            id: player.id,
+            name: player.name,
+            mlbamId: player.id,
+            pa: player.pa_count,
+            avg: Number(player.avg.toFixed(3)),
+            obp: Number(player.obp.toFixed(3)),
+            slg: Number(player.slg.toFixed(3)),
+            iso: Number(player.iso.toFixed(3)),
+            k_rate: Number((player.k_rate * 100).toFixed(1)),
+            bb_rate: Number((player.bb_rate * 100).toFixed(1)),
+            hr_rate: Number((player.hr_rate * 100).toFixed(1)),
+            throws: player.hand === "L" ? "L" : "R",
+            team: "MLB",
+            teamAbbr: teamNameToAbbr["MLB"] ?? null,
+            teamColor: "#888888",
+            is_new: player.is_rookie === "1",
+          }));
+
+        setAllBatters(battersData);
+        setAllPitchers(pitchersData);
+        setLoading(false);
+      } catch (err: any) {
+        console.error("Error loading players:", err);
+        setError(err.message);
+        setLoading(false);
+      }
+    };
+    
+    loadPlayerStats();
+  }, []);
+
 
   useEffect(() => { setSelected(null) }, [tab])
 
@@ -221,7 +290,7 @@ export default function Statistics() {
   }
 
   const batters = useMemo(() => {
-    let data = [...MOCK_BATTERS]
+    let data = [...allBatters]  // Change this from MOCK_BATTERS to allBatters
     if (search) data = data.filter(p => p.name.toLowerCase().includes(search.toLowerCase()) || p.team.toLowerCase().includes(search.toLowerCase()))
     if (teamFilter) data = data.filter(p => p.team === teamFilter)
     if (rookieFilter === "rookie") data = data.filter(p => p.is_rookie)
@@ -241,21 +310,20 @@ export default function Statistics() {
           ? av.localeCompare(bv)
           : bv.localeCompare(av)
       }
-
       return sortDir === "asc"
         ? (av as number) - (bv as number)
         : (bv as number) - (av as number)
     })
     return data
-  }, [search, teamFilter, rookieFilter, sortKey, sortDir])
+  }, [allBatters, search, teamFilter, rookieFilter, sortKey, sortDir])
 
   const pitchers = useMemo(() => {
-    let data = [...MOCK_PITCHERS]
+    let data = [...allPitchers]
     if (search) data = data.filter(p => p.name.toLowerCase().includes(search.toLowerCase()) || p.team.toLowerCase().includes(search.toLowerCase()))
     if (teamFilter) data = data.filter(p => p.team === teamFilter)
     if (rookieFilter === "rookie") data = data.filter(p => p.is_new)
     if (rookieFilter === "vet") data = data.filter(p => !p.is_new)
-     data.sort((a, b) => {
+    data.sort((a, b) => {
       if (sortKey === "status") {
         return sortDir === "asc"
           ? Number(a.is_new) - Number(b.is_new)
@@ -263,9 +331,9 @@ export default function Statistics() {
       }
 
       if (sortKey === "stand") {
-      return sortDir === "asc"
-        ? a.throws.localeCompare(b.throws)
-        : b.throws.localeCompare(a.throws)
+        return sortDir === "asc"
+          ? a.throws.localeCompare(b.throws)
+          : b.throws.localeCompare(a.throws)
       }
 
       const av = a[sortKey as keyof Pitcher]
@@ -282,7 +350,7 @@ export default function Statistics() {
         : (bv as number) - (av as number)
     })
     return data
-  }, [search, teamFilter, rookieFilter, sortKey, sortDir])
+  }, [allPitchers, search, teamFilter, rookieFilter, sortKey, sortDir])
 
   const currentData = tab === "batter" ? batters : pitchers
   const isPitcher = tab === "pitcher"
