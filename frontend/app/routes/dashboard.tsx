@@ -84,14 +84,14 @@ function mergeToGame(
   index: number
 ): Game {
   // Default placeholders
-  let prob1 = 50;
-  let prob2 = 50;
+  let homeWinProb = 0;
+  let awayWinProb = 100;
   let innings: Game["innings"] = [];
   let wholeGameStats = { hits: [0,0], homeruns: [0,0], strikeouts: [0,0] };
 
   if (simulationMatch) {
-    prob1 = Math.round(simulationMatch.home_wp * 100);
-    prob2 = Math.round(simulationMatch.away_wp * 100);
+    homeWinProb = Math.round(simulationMatch.home_wp * 100);
+    awayWinProb = Math.round(simulationMatch.away_wp * 100);
     // Convert cumulative inning averages to per-inning values
     innings = simulationMatch.innings.map((inning, i) => {
       const prev = i === 0 ? null : simulationMatch.innings[i-1];
@@ -116,10 +116,10 @@ function mergeToGame(
 
   return {
     id: index,
-    team1: scheduleGame.homeTeamName,
-    team2: scheduleGame.awayTeamName,
-    prob1,
-    prob2,
+    homeTeam: scheduleGame.homeTeamName,
+    awayTeam: scheduleGame.awayTeamName,
+    homeWinProb,
+    awayWinProb,
     date: scheduleGame.gameDate,
     time: scheduleGame.gameTime,
     isLive: scheduleGame.isLive,
@@ -171,7 +171,7 @@ export default function Dashboard() {
     return mergeToGame(scheduleGame, simMatch, idx);
   });
 
-  const sorted = [...games].sort((a, b) => b.prob1 - a.prob1);
+  const sorted = [...games].sort((a, b) => b.homeWinProb - a.homeWinProb);
 
   const totalLiveGames = scheduleGames.filter(g => g.isLive).length;
   const summaryItems = [
@@ -192,7 +192,7 @@ export default function Dashboard() {
           <table style={{ width: "100%", borderCollapse: "collapse" }} aria-label="Game predictions">
             <thead>
               <tr style={{ background: "rgba(255,255,255,0.02)", borderBottom: "0.5px solid rgba(255,255,255,0.07)" }}>
-                {["Team", "Probability", "Date", "Time", "Team 2", "Probability", "Info"].map((h, i) => (
+                {["Away", "Win Probability", "Date", "Time", "Home", "Win Probability", "Info"].map((h, i) => (
                   <th key={i} scope="col" style={{ padding: "12px 14px", fontSize: 16, fontWeight: 600, color: "rgb(255, 255, 255)", textAlign: i >= 6 ? "center" : "left", letterSpacing: ".1em", textTransform: "uppercase", whiteSpace: "nowrap" }}>{h}</th>
                 ))}
               </tr>
@@ -232,12 +232,12 @@ export default function Dashboard() {
                   return (
                     <React.Fragment key={game.id}>
                       <tr style={{ borderBottom: isExpanded ? "none" : "0.5px solid rgba(255,255,255,0.04)" }}>
-                        <td style={{ padding: "14px 14px" }}><TeamCell name={game.team1} /></td>
-                        <td style={{ padding: "14px 14px" }}><ProbCell prob={game.prob1} name={game.team1} /></td>
+                        <td style={{ padding: "14px 14px" }}><TeamCell name={game.awayTeam} /></td>
+                        <td style={{ padding: "14px 14px" }}><ProbCell prob={game.awayWinProb} name={game.awayTeam} /></td>
                         <td style={{ padding: "14px 14px", fontSize: 14, fontWeight: 700, color: "#f0ede6" }}>{game.date}</td>
                         <td style={{ padding: "14px 14px", fontSize: 15, color: "rgba(255, 255, 255, 0.89)", fontWeight: 700 }}>{game.time}</td>
-                        <td style={{ padding: "14px 14px" }}><TeamCell name={game.team2} /></td>
-                        <td style={{ padding: "14px 14px" }}><ProbCell prob={game.prob2} name={game.team2} /></td>
+                        <td style={{ padding: "14px 14px" }}><TeamCell name={game.homeTeam} /></td>
+                        <td style={{ padding: "14px 14px" }}><ProbCell prob={game.homeWinProb} name={game.homeTeam} /></td>
                         <td style={{ padding: "14px 14px", textAlign: "center" }}>
                           <button
                             onClick={() => setExpandedId(isExpanded ? null : game.id)}
