@@ -4,6 +4,10 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } f
 
 type StatMode = "score" | "hits" | "hrs" | "ks"
 
+// Simulation values are averages over many sims, so they carry long decimal
+// tails. Display them with two decimals (front-end only — the data is untouched).
+const fmt2 = (n: number) => n.toFixed(2)
+
 export default function Graph({
   game,
   backgroundColor,
@@ -58,9 +62,9 @@ export default function Graph({
           {active && <div style={{ fontSize: isEmbedded ? 8 : 10, fontWeight: 600, color: "#f07080", letterSpacing: ".06em" }}>● ACTIVE</div>}
         </div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ fontSize: isEmbedded ? 20 : 30, fontWeight: 700, color: team1Color }}>{v1}</span>
+          <span style={{ fontSize: isEmbedded ? 20 : 30, fontWeight: 700, color: team1Color }}>{fmt2(v1)}</span>
           <span style={{ fontSize: isEmbedded ? 14 : 18, color: "white" }}>vs</span>
-          <span style={{ fontSize: isEmbedded ? 20 : 30, fontWeight: 700, color: team2Color }}>{v2}</span>
+          <span style={{ fontSize: isEmbedded ? 20 : 30, fontWeight: 700, color: team2Color }}>{fmt2(v2)}</span>
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", marginTop: isEmbedded ? 2 : 4 }}>
           <span style={{ fontSize: isEmbedded ? 9 : 11, fontWeight: 600, color: "white" }}>{game.team1}</span>
@@ -110,6 +114,7 @@ export default function Graph({
                   <XAxis dataKey="name" tick={{ fontSize: 12, fontWeight: 700, fill: "white" }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 12, fill: "white" }} axisLine={false} tickLine={false} allowDecimals={false} />
                   <Tooltip
+                    formatter={(value) => fmt2(Number(value))}
                     contentStyle={{ background: "rgba(27, 25, 46, 0.67)", border: "0.5px solid rgba(255,255,255,0.1)", borderRadius: 6, fontSize: 13 }}
                     labelStyle={{ color: "white", marginBottom: 4, fontSize: 13, fontWeight: 600 }}
                   />
@@ -158,7 +163,7 @@ export default function Graph({
         >
           <div style={{ textAlign: "center" }}>
             <div style={{ fontSize: 16, fontWeight: 600, color: "white", marginBottom: 4 }}>{game.team1}</div>
-            <div style={{ fontSize: 45, fontWeight: 900, color: team1Color }}>{score1}</div>
+            <div style={{ fontSize: 45, fontWeight: 900, color: team1Color }}>{fmt2(score1)}</div>
           </div>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
             <div style={{ fontSize: 22, color: "rgba(255,255,255,0.3)" }}>–</div>
@@ -166,7 +171,7 @@ export default function Graph({
           </div>
           <div style={{ textAlign: "center" }}>
             <div style={{ fontSize: 16, fontWeight: 600, color: "white", marginBottom: 4 }}>{game.team2}</div>
-            <div style={{ fontSize: 45, fontWeight: 900, color: team2Color }}>{score2}</div>
+            <div style={{ fontSize: 45, fontWeight: 900, color: team2Color }}>{fmt2(score2)}</div>
           </div>
         </div>
 
@@ -191,6 +196,7 @@ export default function Graph({
             <XAxis dataKey="name" tick={{ fontSize: 15, fontWeight: 700, fill: "white" }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fontSize: 15, fill: "white" }} axisLine={false} tickLine={false} allowDecimals={false} />
             <Tooltip
+              formatter={(value) => fmt2(Number(value))}
               contentStyle={{ background: "rgba(27, 25, 46, 0.67)", border: "0.5px solid rgba(255,255,255,0.1)", borderRadius: 6, fontSize: 15 }}
               labelStyle={{ color: "white", marginBottom: 4, fontSize: 15, fontWeight: 600 }}
             />

@@ -8,8 +8,6 @@ import Graph from "../components/Graphs";
 import type { Game } from "../data/mockData"
 import type { Route } from "./+types/sandbox"
 import { requireAuth } from "../utils/auth"
-import { fetchPlayerStats, type PlayerStats as APIPlayerStats } from "../api/playerStats"
-import { teamNameToAbbr } from "../data/teamMeta";
 
 export async function loader({ request }: Route.LoaderArgs) {
   return await requireAuth(request)
@@ -102,11 +100,7 @@ function PlayerPool({ search, onSearchChange, tab, onTabChange, onDragStart, bat
 
       {/* Player list */}
       <div style={{ flex: 1, overflowY: "auto", padding: "8px 10px" }}>
-        {loading ? (
-          <div style={{ padding: 20, textAlign: "center", fontSize: 13, color: "rgba(255,255,255,0.3)" }}>Loading players…</div>
-        ) : error ? (
-          <div style={{ padding: 20, textAlign: "center", fontSize: 13, color: "#f07080" }}>{error}</div>
-        ) : players.length === 0 ? (
+        {players.length === 0 ? (
           <div style={{ padding: 20, textAlign: "center", fontSize: 13, color: "rgba(255,255,255,0.3)" }}>No players found</div>
         ) : players.map(player => (
           <div
@@ -514,10 +508,6 @@ export default function Sandbox() {
   const [isSimulating, setIsSimulating] = useState(false)
   const [hasSimulated, setHasSimulated] = useState(false)
   const [simError, setSimError] = useState<string | null>(null)
-  const [allBatters, setAllBatters] = useState<Batter[]>([])
-  const [allPitchers, setAllPitchers] = useState<Pitcher[]>([])
-  const [playersLoading, setPlayersLoading] = useState(true)
-  const [playersError, setPlayersError] = useState<string | null>(null)
   const dragPayload = useRef<{ player: Batter | Pitcher; type: "batter" | "pitcher" } | null>(null)
 
     // Fetch real player data
