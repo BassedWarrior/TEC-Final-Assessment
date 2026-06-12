@@ -45,8 +45,16 @@ async def get_schedule(
             away_team = game["teams"]["away"]["team"]
             home_team = game["teams"]["home"]["team"]
 
+            # Get game status
+            status = game.get("status", {})
+            abstract_game_state = status.get("abstractGameState", "")
+
+            # Simple boolean for live games
+            is_live = abstract_game_state in ["Live", "In Progress", "Review"]
+
             all_games.append({
                 "gameDate": game.get("gameDate"),
+                "isLive": is_live,
                 "awayTeamId": away_team["id"],
                 "awayTeamName": away_team["name"],
                 "homeTeamId": home_team["id"],
