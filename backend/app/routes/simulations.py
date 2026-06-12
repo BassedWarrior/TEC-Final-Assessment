@@ -10,7 +10,8 @@ the endpoint returns the id of the persisted match.
 """
 
 import httpx
-from typing import Annotated, Optional
+from typing import Annotated, List, Optional
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field, conlist
 from sqlalchemy import select
@@ -62,9 +63,75 @@ class SimulateRequest(BaseModel):
     home_team: str = "HOME"
     away_team: str = "AWAY"
 
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "home_batter_ids": [
+                    571771, 695238, 683227, 694224, 695731, 813841, 683021, 683734, 676369
+                ],
+                "away_batter_ids": [
+                    571771, 695238, 683227, 694224, 695731, 813841, 683021, 683734, 676369
+                ],
+                "home_pitcher_id": 695239,
+                "away_pitcher_id": 695239,
+                "home_bullpen_ids": [671106, 681084],
+                "away_bullpen_ids": [671106, 681084],
+                "reliever_entry_inning": 6,
+                "n_sims": 500,
+                "seed": 1524,
+                "home_team": "HOME",
+                "away_team": "AWAY",
+            }
+        }
+    }
+
+
+# ---------- Response Models for Documentation ----------
+class WholeGameAverages(BaseModel):
+    avg_home_runs: float = Field(..., description="Average runs scored by home team")
+    avg_away_runs: float = Field(..., description="Average runs scored by away team")
+    avg_home_hits: float
+    avg_away_hits: float
+    avg_home_hr: float
+    avg_away_hr: float
+    avg_home_strikeouts: float
+    avg_away_strikeouts: float
+
+
+class InningAverages(BaseModel):
+    inning_number: int
+    avg_home_runs: float = Field(
+        ..., description="Cumulative home runs up to this inning"
+    )
+    avg_away_runs: float = Field(
+        ..., description="Cumulative away runs up to this inning"
+    )
+    avg_home_hits: float
+    avg_away_hits: float
+    avg_home_hr: float
+    avg_away_hr: float
+    avg_home_strikeouts: float
+    avg_away_strikeouts: float
+
+
+class MatchResponse(BaseModel):
+    match_id: int
+    created_at: Optional[datetime]
+    home_team: str
+    away_team: str
+    n_sims: int
+    home_wp: float
+    away_wp: float
+    whole_game: WholeGameAverages
+    innings: List[InningAverages]
+
+
+class SimulateResponse(BaseModel):
+    match_id: int = Field(..., description="ID of the persisted match")
+
 
 # ---------- Endpoints ----------
-@router.post("/simulate", status_code=201)
+@router.post("/simulate", status_code=201, response_model=SimulateResponse)
 async def simulate(
     req: SimulateRequest,
     db: AsyncSession = Depends(get_db),
@@ -126,7 +193,7 @@ async def simulate(
     return {"match_id": match.id}
 
 
-@router.get("/{match_id}")
+@router.get("/{match_id}", response_model=MatchResponse)
 async def get_match(
     match_id: int,
     db: AsyncSession = Depends(get_db),

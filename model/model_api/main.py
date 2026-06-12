@@ -5,12 +5,11 @@ from pathlib import Path
 SIM_DIR = Path(__file__).resolve().parent.parent / "simulation"
 sys.path.insert(0, str(SIM_DIR))
 
-from predict import simulate_match_from_stats, to_nested  
+from predict import simulate_match_from_stats, to_nested
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
-from fastapi import FastAPI, HTTPException, Query  
-from fastapi.middleware.cors import CORSMiddleware 
-
-from schemas import SimulateRequest 
+from schemas import SimulateRequest, SimulateResponseNested
 
 app = FastAPI(
     title="MLB Model API",
@@ -32,8 +31,13 @@ def health():
     return {"status": "ok"}
 
 
-@app.post("/simulate")
-def simulate(req: SimulateRequest, nested: bool = Query(False)):
+@app.post("/simulate", response_model=SimulateResponseNested)
+def simulate(req: SimulateRequest):
+    """
+    Run a Monte Carlo simulation and return a nested JSON with:
+    - Home_wp, Away_wp: win probabilities.
+    - Simulations: dictionary with per-inning stats for each simulation.
+    """
     try:
         out = simulate_match_from_stats(
             home_batters=req.home_batters,
