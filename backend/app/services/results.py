@@ -1,8 +1,8 @@
 """
 Result aggregation.
 
-Turns the model API's flat per-simulation / per-inning output into the averages
-we persist: for each team, the mean runs (score), hits, home runs and strikeouts
+Turns the model API's **nested** per-simulation / per-inning output into the
+averages we persist: for each team, the mean runs, hits, home runs and strikeouts
 both per inning and for the whole game, plus each team's win probability.
 
 Averaging convention:
@@ -13,6 +13,15 @@ before extra innings) contribute 0 to that inning.
 In the per-inning breakdown, RUNS are cumulative (a running scoreline: each
 inning adds the previous innings' runs), so the last inning equals the
 whole-game average. Hits/HR/strikeouts remain per-inning.
+
+Input nested format (from `to_nested` in `predict.py`):
+{
+  "Home_wp": 0.65, "Away_wp": 0.35,
+  "Simulations": {
+    "sim_1": {"inning_1": {Home_Runs: ..., Away_Runs: ..., ...}, ...},
+    ...
+  }
+}
 """
 
 from collections import defaultdict
@@ -30,32 +39,74 @@ _METRIC_COLUMNS = {
 }
 
 
-def aggregate_results(model_out: dict) -> dict:
+def aggregate_results(nested_out: dict) -> dict:
     """
-    Aggregate the flat model output into match-level and per-inning averages.
+    Aggregate the nested model output into match-level and per-inning averages.
+
+    Args:
+        nested_out: JSON from model API (nested format with Simulations dict).
 
     Returns:
         {
-          "home_wp", "away_wp", "total_sims",
-          "whole_game": {avg_home_runs, avg_away_runs, ...},      # 8 keys
-          "innings": [{inning_number, avg_home_runs, ...}, ...],  # one per inning
+          "home_wp": float,
+          "away_wp": float,
+          "total_sims": int,
+          "whole_game": {
+              "avg_home_runs": float,
+              "avg_away_runs": float,
+              "avg_home_hits": float,
+              "avg_away_hits": float,
+              "avg_home_hr": float,
+              "avg_away_hr": float,
+              "avg_home_strikeouts": float,
+              "avg_away_strikeouts": float,
+          },
+          "innings": [
+              {
+                  "inning_number": int,
+                  "avg_home_runs": float,   # cumulative
+                  "avg_away_runs": float,   # cumulative
+                  "avg_home_hits": float,
+                  "avg_away_hits": float,
+                  "avg_home_hr": float,
+                  "avg_away_hr": float,
+                  "avg_home_strikeouts": float,
+                  "avg_away_strikeouts": float,
+              },
+              ...
+          ]
         }
     Keys in "whole_game" and each inning row match the Match / MatchInning
     column names so they can be splatted straight into the ORM models.
     """
-    match = model_out["match"]
-    total_sims = match.get("total_sims") or 0
+    home_wp = nested_out["Home_wp"]
+    away_wp = nested_out["Away_wp"]
+    simulations = nested_out["Simulations"]
+
+    total_sims = len(simulations)
     denom = total_sims if total_sims > 0 else 1
 
     game_sums: dict = defaultdict(float)
     inning_sums: dict = defaultdict(lambda: defaultdict(float))
 
-    for inn in model_out["innings"]:
-        n = inn["inning_number"]
-        for col, src in _METRIC_COLUMNS.items():
-            value = inn[src]
-            game_sums[col] += value
-            inning_sums[n][col] += value
+    for sim_key, innings_dict in simulations.items():
+        for inning_key, stats in innings_dict.items():
+            inning_num = int(inning_key.split("_")[1])
+
+            mapping = {
+                "home_runs": stats.get("Home_Runs", 0),
+                "away_runs": stats.get("Away_Runs", 0),
+                "home_hits": stats.get("Home_Hits", 0),
+                "away_hits": stats.get("Away_Hits", 0),
+                "home_hr": stats.get("Home_HR", 0),
+                "away_hr": stats.get("Away_HR", 0),
+                "home_strikeouts": stats.get("Home_STKO", 0),
+                "away_strikeouts": stats.get("Away_STKO", 0),
+            }
+
+            for metric, value in mapping.items():
+                game_sums[metric] += value
+                inning_sums[inning_num][metric] += value
 
     whole_game = {f"avg_{col}": game_sums[col] / denom for col in _METRIC_COLUMNS}
 
@@ -76,8 +127,8 @@ def aggregate_results(model_out: dict) -> dict:
         innings.append(row)
 
     return {
-        "home_wp": match["home_wp"],
-        "away_wp": match["away_wp"],
+        "home_wp": home_wp,
+        "away_wp": away_wp,
         "total_sims": total_sims,
         "whole_game": whole_game,
         "innings": innings,

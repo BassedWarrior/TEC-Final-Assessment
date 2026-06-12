@@ -42,9 +42,9 @@ def simulate(req: SimulateRequest, nested: bool = Query(False)):
             away_pitcher=req.away_pitcher,
             home_bullpen=req.home_bullpen,
             away_bullpen=req.away_bullpen,
-            reliever_entry_inning=6,
-            n_sims=100,
-            seed=42,
+            reliever_entry_inning=req.reliever_entry_inning,
+            n_sims=req.n_sims,
+            seed=req.seed,
             home_team=req.home_team,
             away_team=req.away_team,
         )
@@ -54,4 +54,5 @@ def simulate(req: SimulateRequest, nested: bool = Query(False)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error en la simulación: {e}")
 
-    return to_nested(out) if nested else out
+    # Always return the nested format
+    return to_nested(out)

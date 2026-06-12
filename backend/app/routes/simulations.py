@@ -90,14 +90,10 @@ async def simulate(
         away_team=req.away_team,
     )
 
-    # Ask the model for the flat per-inning breakdown (needed to aggregate).
+    # Ask the model API (always returns nested JSON now)
     async with httpx.AsyncClient(timeout=120.0) as client:
         try:
-            resp = await client.post(
-                f"{settings.MODEL_API_URL}/simulate",
-                params={"nested": False},
-                json=payload,
-            )
+            resp = await client.post(f"{settings.MODEL_API_URL}/simulate", json=payload)
         except httpx.RequestError as e:
             raise HTTPException(
                 status_code=503,
@@ -108,6 +104,7 @@ async def simulate(
         # Surface the model API's error to the caller
         raise HTTPException(status_code=resp.status_code, detail=resp.text)
 
+    # The response is already nested; aggregate it
     agg = aggregate_results(resp.json())
 
     # Persist match-level averages + per-inning averages.
