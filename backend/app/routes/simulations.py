@@ -126,12 +126,8 @@ class MatchResponse(BaseModel):
     innings: List[InningAverages]
 
 
-class SimulateResponse(BaseModel):
-    match_id: int = Field(..., description="ID of the persisted match")
-
-
 # ---------- Endpoints ----------
-@router.post("/simulate", status_code=201, response_model=SimulateResponse)
+@router.post("/simulate", status_code=201, response_model=MatchResponse)
 async def simulate(
     req: SimulateRequest,
     db: AsyncSession = Depends(get_db),
@@ -140,7 +136,7 @@ async def simulate(
     """
     Resolve player ids, run the simulation, persist the aggregated result.
 
-    Returns the id of the stored match: ``{"match_id": <int>}``.
+    Returns the simulated match statistics, overall and per inning.
     """
     payload = await build_model_payload(
         db,
@@ -190,7 +186,23 @@ async def simulate(
     await db.commit()
     await db.refresh(match)
 
-    return {"match_id": match.id}
+    return {
+        "match_id": match.id,
+        "created_at": match.created_at.isoformat() if match.created_at else None,
+        "home_team": match.home_team,
+        "away_team": match.away_team,
+        "n_sims": match.n_sims,
+        "home_wp": match.home_wp,
+        "away_wp": match.away_wp,
+        "whole_game": {f: getattr(match, f) for f in _AVG_FIELDS},
+        "innings": [
+            {
+                "inning_number": inn.inning_number,
+                **{f: getattr(inn, f) for f in _AVG_FIELDS},
+            }
+            for inn in match.innings
+        ],
+    }
 
 
 @router.get("/{match_id}", response_model=MatchResponse)
