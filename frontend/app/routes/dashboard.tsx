@@ -98,8 +98,6 @@ export default function Dashboard() {
                         <td style={{ padding: "14px 14px" }}><TeamCell name={game.team2} /></td>
                         <td style={{ padding: "14px 14px" }}><ProbCell prob={game.prob2} name={game.team2} /></td>
                         <td style={{ padding: "14px 14px", textAlign: "center" }}>
-                        </td>
-                        <td style={{ padding: "14px 14px", textAlign: "center" }}>
                           <button
                             onClick={() => setExpandedId(isExpanded ? null : game.id)}
                             aria-label={isExpanded ? "Collapse predictions" : "Expand predictions"}
