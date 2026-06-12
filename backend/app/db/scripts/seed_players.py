@@ -30,9 +30,13 @@ MIN_PA_BATTER = 100
 MIN_PA_PITCHER = 50
 
 
-def _names_from_splits(group: str, season: int) -> dict:
+def _meta_from_splits(group: str, season: int) -> dict:
+    """{id: {"name": fullName, "team": team name}} for a season/group."""
     return {
-        s["player"]["id"]: s["player"].get("fullName", str(s["player"]["id"]))
+        s["player"]["id"]: {
+            "name": s["player"].get("fullName", str(s["player"]["id"])),
+            "team": s.get("team", {}).get("name", ""),
+        }
         for s in mlb_stats._fetch_season_splits(group, season)
     }
 
@@ -42,8 +46,8 @@ async def seed():
     batters = mlb_stats.batter_frame(SEASON)
     pitchers = mlb_stats.pitcher_frame(SEASON)
 
-    batter_names = _names_from_splits("hitting", SEASON)
-    pitcher_names = _names_from_splits("pitching", SEASON)
+    batter_meta = _meta_from_splits("hitting", SEASON)
+    pitcher_meta = _meta_from_splits("pitching", SEASON)
 
     all_ids = list(batters.index) + list(pitchers.index)
     print(f"Fetching handedness for {len(all_ids)} players...")
@@ -55,9 +59,11 @@ async def seed():
     for mlb_id, row in batters.iterrows():
         seen_ids.add(int(mlb_id))
         is_rookie = row["pa_count"] < MIN_PA_BATTER
+        meta = batter_meta.get(mlb_id, {})
         players.append(Player(
             id=int(mlb_id),
-            name=batter_names.get(mlb_id, str(mlb_id)),
+            name=meta.get("name", str(mlb_id)),
+            team=meta.get("team", ""),
             hand=hands.get(mlb_id, {}).get("bat", "R"),
             pa_count=float(row["pa_count"]),
             avg=row["avg"], obp=row["obp"], slg=row["slg"], iso=row["iso"],
@@ -70,9 +76,11 @@ async def seed():
         if int(mlb_id) in seen_ids:
             continue
         is_rookie = row["pa_count"] < MIN_PA_PITCHER
+        meta = pitcher_meta.get(mlb_id, {})
         players.append(Player(
             id=int(mlb_id),
-            name=pitcher_names.get(mlb_id, str(mlb_id)),
+            name=meta.get("name", str(mlb_id)),
+            team=meta.get("team", ""),
             hand=hands.get(mlb_id, {}).get("throw", "R"),
             pa_count=float(row["pa_count"]),
             avg=row["avg"], obp=row["obp"], slg=row["slg"], iso=row["iso"],
