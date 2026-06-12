@@ -12,7 +12,7 @@ the persisted match (averages plus the lineups it ran with).
 
 import httpx
 from typing import Annotated, List, Optional
-from datetime import datetime
+from datetime import datetime, date
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field, conlist
 from sqlalchemy import select
@@ -74,6 +74,8 @@ def _serialize_match(match: Match) -> dict:
     return {
         "match_id": match.id,
         "created_at": match.created_at.isoformat() if match.created_at else None,
+        "match_date": match.match_date.isoformat() if match.match_date else None,
+        "match_time": match.match_time.strftime("%H:%M") if match.match_time else None,
         "home_team": match.home_team,
         "away_team": match.away_team,
         "n_sims": match.n_sims,
@@ -170,6 +172,8 @@ class InningAverages(BaseModel):
 class MatchResponse(BaseModel):
     match_id: int
     created_at: Optional[datetime]
+    match_date: Optional[date]
+    match_time: Optional[str]  # "HH:MM" (already formatted; kept as str so Pydantic doesn't re-add seconds)
     home_team: str
     away_team: str
     n_sims: int

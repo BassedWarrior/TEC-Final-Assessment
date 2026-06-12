@@ -73,7 +73,9 @@ function findSimulationMatch(
   return simulations.find(
     (sim) =>
       sim.home_team === scheduleGame.homeTeamName &&
-      sim.away_team === scheduleGame.awayTeamName
+      sim.away_team === scheduleGame.awayTeamName &&
+      sim.match_date=== scheduleGame.gameDate &&
+      sim.match_time === scheduleGame.gameTime
   );
 }
 
@@ -171,7 +173,9 @@ export default function Dashboard() {
     return mergeToGame(scheduleGame, simMatch, idx);
   });
 
-  const sorted = [...games].sort((a, b) => b.homeWinProb - a.homeWinProb);
+  const sorted = [...games].sort(
+    (a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time)
+  );
 
   const totalLiveGames = scheduleGames.filter(g => g.isLive).length;
   const summaryItems = [

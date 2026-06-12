@@ -31,6 +31,8 @@ export interface DashboardMatch {
     avg_away_strikeouts: number;
   };
   innings: InningAverages[];
+  match_date: string | null;
+  match_time: string | null;
 }
 
 export async function fetchDashboardMatches(): Promise<DashboardMatch[]> {

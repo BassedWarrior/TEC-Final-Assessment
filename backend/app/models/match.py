@@ -11,7 +11,7 @@ The auto-incrementing `matches.id` is what the /simulate endpoint returns.
 Averages are computed in app.services.results.aggregate_results.
 """
 
-from sqlalchemy import Column, Integer, String, Boolean, Float, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, Float, DateTime, Date, Time, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -29,6 +29,11 @@ class Match(Base):
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True
     )
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    # When the real-world game is scheduled to start, split into date and time
+    # (UTC, from the MLB schedule). NULL for ad-hoc user simulations; set by the
+    # schedule cron (app.db.scripts.download_matches) for pre-simulated games.
+    match_date = Column(Date, nullable=True, index=True)
+    match_time = Column(Time, nullable=True)
 
     home_team = Column(String, nullable=False)
     away_team = Column(String, nullable=False)
