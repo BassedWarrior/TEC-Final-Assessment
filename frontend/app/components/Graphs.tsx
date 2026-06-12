@@ -115,7 +115,7 @@ export default function Graph({
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: -20 }}>
               <XAxis dataKey="name" tick={{ fontSize: 12, fontWeight: 700, fill: "white" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 12, fill: "white" }} axisLine={false} tickLine={false} allowDecimals={false} />
+              <YAxis tick={{ fontSize: 12, fill: "white" }} axisLine={false} tickLine={false} allowDecimals={false} domain={[0, "dataMax + 0.1"]} />
               <Tooltip
                 contentStyle={{ background: "rgba(27, 25, 46, 0.67)", border: "0.5px solid rgba(255,255,255,0.1)", borderRadius: 6, fontSize: 13 }}
                 labelStyle={{ color: "white", marginBottom: 4, fontSize: 13, fontWeight: 600 }}
@@ -194,7 +194,7 @@ export default function Graph({
         <ResponsiveContainer width="100%" height="90%">
           <LineChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: -20 }}>
             <XAxis dataKey="name" tick={{ fontSize: 15, fontWeight: 700, fill: "white" }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 15, fill: "white" }} axisLine={false} tickLine={false} allowDecimals={false} />
+            <YAxis tick={{ fontSize: 15, fill: "white" }} axisLine={false} tickLine={false} allowDecimals={false} domain={[0, "dataMax + 0.1"]} />
             <Tooltip
               formatter={(value) => fmt2(Number(value))}
               contentStyle={{ background: "rgba(27, 25, 46, 0.67)", border: "0.5px solid rgba(255,255,255,0.1)", borderRadius: 6, fontSize: 15 }}
