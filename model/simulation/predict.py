@@ -112,7 +112,6 @@ def simulate_match_from_stats(
     seed: Optional[int] = None,
     home_team: str = "HOME",
     away_team: str = "AWAY",
-    match_id: int = 1,
 ) -> dict:
     """
     Same as win_probability_from_stats, but in addition to the win prob it
@@ -175,7 +174,7 @@ def simulate_match_from_stats(
         if result.home_won:
             home_wins += 1
 
-        simulations.append({"id": sim_id, "match_id": match_id})
+        simulations.append({"id": sim_id})
 
         for inn in result.innings:
             inning_id += 1
@@ -199,7 +198,6 @@ def simulate_match_from_stats(
 
     return {
         "match": {
-            "id": match_id,
             "home_wp": round(wp_home, 4),
             "away_wp": round(1.0 - wp_home, 4),
             "total_sims": valid_sims,
