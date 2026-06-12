@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from "react"
 import { PageLayout, TopBar, SummaryBar } from "../components/Layout";
 import type { Batter, Pitcher } from "../data/mockPlayers"
+import { fetchPlayerStats } from "../api/playerStats"
+import { teamNameToAbbr } from "../data/teamMeta"
+import { runSimulation, matchToGame, type SimulateRequest } from "../api/simulate"
 import Graph from "../components/Graphs";
-import type { Game, InningScore as GameInningScore } from "../data/mockData"
+import type { Game } from "../data/mockData"
 import type { Route } from "./+types/sandbox"
 import { requireAuth } from "../utils/auth"
-import { fetchPlayerStats, type PlayerStats as APIPlayerStats } from "../api/playerStats"
-import { teamNameToAbbr } from "../data/teamMeta";
 
 export async function loader({ request }: Route.LoaderArgs) {
   return await requireAuth(request)
@@ -494,53 +495,6 @@ function emptyLineup(): TeamLineup {
   }
 }
 
-// Helper to generate mock game data for the Graph component
-function generateMockGame(homeLineup: TeamLineup, awayLineup: TeamLineup): Game | null {
-  // Get team names from first batter or fallback
-  const homeBatter = homeLineup.batters.find(b => b !== null)
-  const awayBatter = awayLineup.batters.find(b => b !== null)
-
-  if (!homeBatter || !awayBatter) return null
-
-  const homeTeam = homeBatter.team
-  const awayTeam = awayBatter.team
-
-  // Generate mock innings (9 innings)
-  const innings: GameInningScore[] = Array.from({ length: 9 }, (_, i) => ({
-    inning: i + 1,
-    team1: Math.random() < 0.35 ? Math.floor(Math.random() * 3) : 0,
-    team2: Math.random() < 0.35 ? Math.floor(Math.random() * 3) : 0,
-    hits1: Math.floor(Math.random() * 4),
-    hits2: Math.floor(Math.random() * 4),
-    hrs1: Math.floor(Math.random() * 2),
-    hrs2: Math.floor(Math.random() * 2),
-    ks1: Math.floor(Math.random() * 3),
-    ks2: Math.floor(Math.random() * 3),
-  }))
-
-  // Calculate totals
-  const totalHits1 = innings.reduce((sum, inn) => sum + inn.hits1, 0)
-  const totalHits2 = innings.reduce((sum, inn) => sum + inn.hits2, 0)
-  const totalHrs1 = innings.reduce((sum, inn) => sum + inn.hrs1, 0)
-  const totalHrs2 = innings.reduce((sum, inn) => sum + inn.hrs2, 0)
-  const totalKs1 = innings.reduce((sum, inn) => sum + inn.ks1, 0)
-  const totalKs2 = innings.reduce((sum, inn) => sum + inn.ks2, 0)
-
-  return {
-    id: 1,
-    team1: awayTeam, // Note: Graph expects team1 as first argument
-    team2: homeTeam,
-    innings: innings,
-    hits: [totalHits1, totalHits2] as [number, number],
-    homeruns: [totalHrs1, totalHrs2] as [number, number],
-    strikeouts: [totalKs1, totalKs2] as [number, number],
-    prob1: 45,
-    prob2: 55,
-    date: "June 10",
-    time: "8:00 PM"
-  }
-}
-
 export default function Sandbox() {
   const [home, setHome] = useState<TeamLineup>(emptyLineup())
   const [away, setAway] = useState<TeamLineup>(emptyLineup())
@@ -553,6 +507,7 @@ export default function Sandbox() {
   const [gameData, setGameData] = useState<Game | null>(null)
   const [isSimulating, setIsSimulating] = useState(false)
   const [hasSimulated, setHasSimulated] = useState(false)
+  const [simError, setSimError] = useState<string | null>(null)
   const dragPayload = useRef<{ player: Batter | Pitcher; type: "batter" | "pitcher" } | null>(null)
 
     // Fetch real player data
@@ -634,15 +589,6 @@ export default function Sandbox() {
 
   const lineupComplete = isLineupComplete()
 
-  // Update game data whenever lineups change
-  const updateGameData = () => {
-    // Only auto-update if we haven't simulated yet, or reset simulation state
-    if (!hasSimulated) {
-      const mockGame = generateMockGame(home, away)
-      setGameData(mockGame)
-    }
-  }
-
   // ── Reset individual team ───────────────────────────────────────────────────
   function handleResetTeam(side: TeamSide) {
     const empty = emptyLineup()
@@ -652,7 +598,6 @@ export default function Sandbox() {
       setAway(empty)
     }
     setHasSimulated(false) // Reset simulation flag when lineups change
-    updateGameData()
   }
 
   // ── Drag from pool ──────────────────────────────────────────────────────────
@@ -683,7 +628,6 @@ export default function Sandbox() {
     })
     dragPayload.current = null
     setHasSimulated(false) // Reset simulation flag when lineups change
-    updateGameData()
   }
 
   // ── Remove from slot ────────────────────────────────────────────────────────
@@ -695,7 +639,6 @@ export default function Sandbox() {
       return updated
     })
     setHasSimulated(false) // Reset simulation flag when lineups change
-    updateGameData()
   }
 
   // ── Reorder within a section ────────────────────────────────────────────────
@@ -710,7 +653,6 @@ export default function Sandbox() {
       return { ...prev, [section]: arr }
     })
     setHasSimulated(false) // Reset simulation flag when lineups change
-    updateGameData()
   }
 
   // ── Add / remove pitcher slots ──────────────────────────────────────────────
@@ -718,7 +660,6 @@ export default function Sandbox() {
     const setter = side === "home" ? setHome : setAway
     setter(prev => ({ ...prev, pitchers: [...prev.pitchers, null] }))
     setHasSimulated(false) // Reset simulation flag when lineups change
-    updateGameData()
   }
 
   function handleRemovePitcherSlot(side: TeamSide) {
@@ -728,7 +669,6 @@ export default function Sandbox() {
       return { ...prev, pitchers: prev.pitchers.slice(0, -1) }
     })
     setHasSimulated(false) // Reset simulation flag when lineups change
-    updateGameData()
   }
 
   // ── Run Simulation ──────────────────────────────────────────────────────────
@@ -736,15 +676,37 @@ export default function Sandbox() {
     if (!lineupComplete) return
 
     setIsSimulating(true)
+    setSimError(null)
 
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    // The lineup is complete, so every slot is filled — the filters below just
+    // narrow the (Batter | null)[] types and let us read ids safely.
+    const homeBatterIds = home.batters.filter((b): b is Batter => b !== null).map(b => b.id)
+    const awayBatterIds = away.batters.filter((b): b is Batter => b !== null).map(b => b.id)
+    const homePitchers = home.pitchers.filter((p): p is Pitcher => p !== null)
+    const awayPitchers = away.pitchers.filter((p): p is Pitcher => p !== null)
 
-    // Generate fresh mock data for the simulation
-    const simulatedGame = generateMockGame(home, away)
-    setGameData(simulatedGame)
-    setHasSimulated(true)
-    setIsSimulating(false)
+    // First pitcher is the starter; any extras become the bullpen.
+    const body: SimulateRequest = {
+      home_batter_ids: homeBatterIds,
+      away_batter_ids: awayBatterIds,
+      home_pitcher_id: homePitchers[0].id,
+      away_pitcher_id: awayPitchers[0].id,
+      home_bullpen_ids: homePitchers.length > 1 ? homePitchers.slice(1).map(p => p.id) : undefined,
+      away_bullpen_ids: awayPitchers.length > 1 ? awayPitchers.slice(1).map(p => p.id) : undefined,
+      home_team: "Home",
+      away_team: "Away",
+    }
+
+    try {
+      const match = await runSimulation(body)
+      setGameData(matchToGame(match, "Away", "Home"))
+      setHasSimulated(true)
+    } catch (err: any) {
+      setSimError(err?.message ?? "Simulation failed")
+      setHasSimulated(false)
+    } finally {
+      setIsSimulating(false)
+    }
   }
 
   const homeBattersFilled = home.batters.filter(Boolean).length
@@ -838,6 +800,11 @@ export default function Sandbox() {
                       <div style={{ fontSize: 14, color: "rgba(255,255,255,0.6)" }}>
                         Both teams have complete lineups. Click the button below to run the simulation.
                       </div>
+                      {simError && (
+                        <div style={{ marginTop: 12, fontSize: 13, color: "#f07080" }}>
+                          {simError}
+                        </div>
+                      )}
                     </div>
                     <button
                       onClick={handleRunSimulation}

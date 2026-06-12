@@ -11,7 +11,7 @@ The auto-incrementing `matches.id` is what the /simulate endpoint returns.
 Averages are computed in app.services.results.aggregate_results.
 """
 
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, Float, DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -54,6 +54,16 @@ class Match(Base):
         order_by="MatchInning.inning_number",
     )
 
+    # The exact rosters this match ran with — one row per lineup slot. Mirrors the
+    # team-roster `lineups` table, but scoped to a match (and a home/away side)
+    # instead of a team. Lets the history view rebuild the lineups the user built.
+    lineup_slots = relationship(
+        "MatchLineup",
+        back_populates="match",
+        cascade="all, delete-orphan",
+        order_by="MatchLineup.slot_order",
+    )
+
 
 class MatchInning(Base):
     """Per-inning averages for a match."""
@@ -76,3 +86,26 @@ class MatchInning(Base):
     avg_away_strikeouts = Column(Float, nullable=False)
 
     match = relationship("Match", back_populates="innings")
+
+
+class MatchLineup(Base):
+    """One player slot (batter or pitcher) within a match's home/away lineup.
+
+    Same shape as the team `lineups` table — `is_batter` tells batters from
+    pitchers and `slot_order` is the position within that group — but keyed to a
+    match and a side rather than a team. Pitcher slot 1 is the starter; higher
+    slot numbers are the bullpen.
+    """
+
+    __tablename__ = "match_lineups"
+
+    id = Column(Integer, primary_key=True)
+    match_id = Column(
+        Integer, ForeignKey("matches.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    side = Column(String(4), nullable=False)  # "home" or "away"
+    is_batter = Column(Boolean, nullable=False)  # True = batter, False = pitcher
+    slot_order = Column(Integer, nullable=False)  # position within its side+role group
+    player_id = Column(Integer, ForeignKey("players.id"), nullable=False)
+
+    match = relationship("Match", back_populates="lineup_slots")
