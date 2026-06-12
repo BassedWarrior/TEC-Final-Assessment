@@ -226,7 +226,10 @@ async def get_match(
         "away_wp": match.away_wp,
         "whole_game": {f: getattr(match, f) for f in _AVG_FIELDS},
         "innings": [
-            {"inning_number": inn.inning_number, **{f: getattr(inn, f) for f in _AVG_FIELDS}}
+            {
+                "inning_number": inn.inning_number,
+                **{f: getattr(inn, f) for f in _AVG_FIELDS},
+            }
             for inn in match.innings
         ],
     }

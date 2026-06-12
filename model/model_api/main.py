@@ -1,7 +1,6 @@
 import sys
 from pathlib import Path
 
-
 SIM_DIR = Path(__file__).resolve().parent.parent / "simulation"
 sys.path.insert(0, str(SIM_DIR))
 
@@ -13,7 +12,7 @@ from schemas import SimulateRequest, SimulateResponseNested
 
 app = FastAPI(
     title="MLB Model API",
-    description="Simulación Monte Carlo de partidos a partir de arrays de stats",
+    description="Monte Carlo simulation of baseball games from stat arrays",
     version="0.1.0",
 )
 
@@ -54,9 +53,9 @@ def simulate(req: SimulateRequest):
         )
     except FileNotFoundError as e:
         # falta pa_model.txt o feature_names.csv
-        raise HTTPException(status_code=500, detail=f"Artefacto del modelo no encontrado: {e}")
+        raise HTTPException(status_code=500, detail=f"Model artifact not found: {e}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error en la simulación: {e}")
+        raise HTTPException(status_code=500, detail=f"Simulation error: {e}")
 
     # Always return the nested format
     return to_nested(out)
