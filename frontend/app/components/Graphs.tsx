@@ -33,12 +33,16 @@ export default function Graph({
       [game.awayTeam]: prev.reduce((s, x) => s + (x[key1] as number), 0) + (ing[key1] as number),
       [game.homeTeam]: prev.reduce((s, x) => s + (x[key2] as number), 0) + (ing[key2] as number),
     })
+    const direct = (key1: keyof InningScore, key2: keyof InningScore) => ({
+      [game.awayTeam]: ing[key1] as number,
+      [game.homeTeam]: ing[key2] as number,
+    })
     return {
       name: `Inn ${ing.inning}`,
       ...(mode === "score" ? cum("awayRuns", "homeRuns") :
-          mode === "hits"  ? cum("awayHits", "homeHits") :
-          mode === "hrs"   ? cum("awayHRs",  "homeHRs")  :
-                             cum("awayStrikeouts",   "homeStrikeouts")),
+          mode === "hits"  ? direct("awayHits", "homeHits") :
+          mode === "hrs"   ? direct("awayHRs",  "homeHRs")  :
+                             direct("awayStrikeouts",   "homeStrikeouts")),
     }
   })
   console.log(chartData)
