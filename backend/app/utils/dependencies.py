@@ -59,13 +59,19 @@ async def get_current_user(
             access_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
         )
         user_id: str = payload.get("sub")
+        user_email: str = payload.get("email")
+        token_ver: int = payload.get("ver")
         if user_id is None:
             raise credentials_exception
     except JWTError:
         raise credentials_exception
 
-    result = await db.execute(select(User).where(User.id == user_id))
+    result = await db.execute(
+        select(User).where(User.id == user_id, User.email == user_email)
+    )
     user = result.scalar_one_or_none()
     if user is None:
+        raise credentials_exception
+    if token_ver is None or token_ver != user.token_version:
         raise credentials_exception
     return user

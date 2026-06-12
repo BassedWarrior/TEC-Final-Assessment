@@ -12,7 +12,7 @@ the endpoint returns the id of the persisted match.
 import httpx
 from typing import Annotated, List, Optional
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field, conlist
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,6 +20,7 @@ from sqlalchemy.orm import selectinload
 
 from app.config import settings
 from app.db.session import get_db
+from app.limiter import limiter
 from app.models.match import Match, MatchInning
 from app.models.user import User
 from app.services.lineups import build_model_payload
@@ -128,7 +129,9 @@ class MatchResponse(BaseModel):
 
 # ---------- Endpoints ----------
 @router.post("/simulate", status_code=201, response_model=MatchResponse)
+@limiter.limit("30/minute")
 async def simulate(
+    request: Request,
     req: SimulateRequest,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
