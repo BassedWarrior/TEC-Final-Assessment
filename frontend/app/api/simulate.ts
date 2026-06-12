@@ -108,8 +108,8 @@ export function matchToGame(
   let prevAwayRuns = 0;
   let prevHomeRuns = 0;
   const innings: InningScore[] = ordered.map((inn) => {
-    const homeRuns = inn.avg_away_runs - prevAwayRuns; // per-inning away runs
-    const awayRuns = inn.avg_home_runs - prevHomeRuns; // per-inning home runs
+    const awayRuns = inn.avg_away_runs - prevAwayRuns; // per-inning away runs
+    const homeRuns = inn.avg_home_runs - prevHomeRuns; // per-inning home runs
     prevAwayRuns = inn.avg_away_runs;
     prevHomeRuns = inn.avg_home_runs;
 
@@ -117,12 +117,12 @@ export function matchToGame(
       inning: inn.inning_number,
       homeRuns,
       awayRuns,
-      homeHits: inn.avg_away_hits,
-      awayHits: inn.avg_home_hits,
-      homeHRs: inn.avg_away_hr,
-      awayHRs: inn.avg_home_hr,
-      homeStrikeouts: inn.avg_away_strikeouts,
-      awayStrikeouts: inn.avg_home_strikeouts,
+      awayHits: inn.avg_away_hits,
+      homeHits: inn.avg_home_hits,
+      awayHRs: inn.avg_away_hr,
+      homeHRs: inn.avg_home_hr,
+      awayStrikeouts: inn.avg_away_strikeouts,
+      homeStrikeouts: inn.avg_home_strikeouts,
     };
   });
 
@@ -130,10 +130,10 @@ export function matchToGame(
 
   return {
     id: match.match_id,
-    homeTeam: awayName,
-    awayTeam: homeName,
-    homeWinProb: Math.round(match.away_wp * 100),
-    awayWinProb: Math.round(match.home_wp * 100),
+    awayTeam: awayName,
+    homeTeam: homeName,
+    awayWinProb: Math.round(match.away_wp * 100),
+    homeWinProb: Math.round(match.home_wp * 100),
     date: match.created_at ? new Date(match.created_at).toLocaleDateString() : "",
     time: match.created_at ? new Date(match.created_at).toLocaleTimeString() : "",
     innings,
