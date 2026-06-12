@@ -97,14 +97,14 @@ function mergeToGame(
       const prev = i === 0 ? null : simulationMatch.innings[i-1];
       return {
         inning: inning.inning_number,
-        home_runs: inning.avg_home_runs - (prev?.avg_home_runs ?? 0),
-        away_runs: inning.avg_away_runs - (prev?.avg_away_runs ?? 0),
-        home_hits: inning.avg_home_hits - (prev?.avg_home_hits ?? 0),
-        away_hits: inning.avg_away_hits - (prev?.avg_away_hits ?? 0),
-        home_hr: inning.avg_home_hr - (prev?.avg_home_hr ?? 0),
-        away_hr: inning.avg_away_hr - (prev?.avg_away_hr ?? 0),
-        home_strikeouts: inning.avg_home_strikeouts - (prev?.avg_home_strikeouts ?? 0),
-        away_strikeouts: inning.avg_away_strikeouts - (prev?.avg_away_strikeouts ?? 0),
+        homeRuns: inning.avg_home_runs - (prev?.avg_home_runs ?? 0),
+        awayRuns: inning.avg_away_runs - (prev?.avg_away_runs ?? 0),
+        homeHits: inning.avg_home_hits - (prev?.avg_home_hits ?? 0),
+        awayHits: inning.avg_away_hits - (prev?.avg_away_hits ?? 0),
+        homeHRs: inning.avg_home_hr - (prev?.avg_home_hr ?? 0),
+        awayHRs: inning.avg_away_hr - (prev?.avg_away_hr ?? 0),
+        homeStrikeouts: inning.avg_home_strikeouts - (prev?.avg_home_strikeouts ?? 0),
+        awayStrikeouts: inning.avg_away_strikeouts - (prev?.avg_away_strikeouts ?? 0),
       };
     });
     wholeGameStats = {
