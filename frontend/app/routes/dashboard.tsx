@@ -3,6 +3,7 @@ import { useState, useEffect } from "react"
 import { PageLayout, TopBar, SummaryBar } from "../components/Layout";
 import Graph from "../components/Graphs";
 import { fetchSchedule, type ScheduleGame } from "../api/schedule";
+import { fetchDashboardMatches, type DashboardMatch } from "../api/simulations";
 import React from 'react';
 import { teamNameToAbbr, teamMeta } from "../data/teamMeta";
 import { type Game } from "../data/game";
@@ -64,55 +65,113 @@ function ProbCell({ prob, name }: { prob: number; name: string }) {
 
 type StatMode = "score" | "hits" | "hrs" | "ks"
 
+// Helper to find a simulation match for a schedule game
+function findSimulationMatch(
+  scheduleGame: ScheduleGame,
+  simulations: DashboardMatch[]
+): DashboardMatch | undefined {
+  return simulations.find(
+    (sim) =>
+      sim.home_team === scheduleGame.homeTeamName &&
+      sim.away_team === scheduleGame.awayTeamName
+  );
+}
+
+// Merge schedule and simulation data into a Game object
+function mergeToGame(
+  scheduleGame: ScheduleGame,
+  simulationMatch: DashboardMatch | undefined,
+  index: number
+): Game {
+  // Default placeholders
+  let prob1 = 50;
+  let prob2 = 50;
+  let innings: Game["innings"] = [];
+  let wholeGameStats = { hits: [0,0], homeruns: [0,0], strikeouts: [0,0] };
+
+  if (simulationMatch) {
+    prob1 = Math.round(simulationMatch.home_wp * 100);
+    prob2 = Math.round(simulationMatch.away_wp * 100);
+    // Convert cumulative inning averages to per-inning values
+    innings = simulationMatch.innings.map((inning, i) => {
+      const prev = i === 0 ? null : simulationMatch.innings[i-1];
+      return {
+        inning: inning.inning_number,
+        home_runs: inning.avg_home_runs - (prev?.avg_home_runs ?? 0),
+        away_runs: inning.avg_away_runs - (prev?.avg_away_runs ?? 0),
+        home_hits: inning.avg_home_hits - (prev?.avg_home_hits ?? 0),
+        away_hits: inning.avg_away_hits - (prev?.avg_away_hits ?? 0),
+        home_hr: inning.avg_home_hr - (prev?.avg_home_hr ?? 0),
+        away_hr: inning.avg_away_hr - (prev?.avg_away_hr ?? 0),
+        home_strikeouts: inning.avg_home_strikeouts - (prev?.avg_home_strikeouts ?? 0),
+        away_strikeouts: inning.avg_away_strikeouts - (prev?.avg_away_strikeouts ?? 0),
+      };
+    });
+    wholeGameStats = {
+      hits: [simulationMatch.whole_game.avg_home_hits, simulationMatch.whole_game.avg_away_hits],
+      homeruns: [simulationMatch.whole_game.avg_home_hr, simulationMatch.whole_game.avg_away_hr],
+      strikeouts: [simulationMatch.whole_game.avg_home_strikeouts, simulationMatch.whole_game.avg_away_strikeouts],
+    };
+  }
+
+  return {
+    id: index,
+    team1: scheduleGame.homeTeamName,
+    team2: scheduleGame.awayTeamName,
+    prob1,
+    prob2,
+    date: scheduleGame.gameDate,
+    time: scheduleGame.gameTime,
+    isLive: scheduleGame.isLive,
+    isFinal: scheduleGame.isFinal,
+    innings,
+    winner: null,
+    status: scheduleGame.isLive ? "Live" : scheduleGame.isFinal ? "Final" : "Scheduled",
+    hits: wholeGameStats.hits,
+    homeruns: wholeGameStats.homeruns,
+    strikeouts: wholeGameStats.strikeouts,
+  };
+}
+
 export default function Dashboard() {
   const navigate = useNavigate()
   const [scheduleGames, setScheduleGames] = useState<ScheduleGame[]>([]);
+  const [simulations, setSimulations] = useState<DashboardMatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null)
 
   useEffect(() => {
-    const loadSchedule = async () => {
+    const loadData = async () => {
       try {
         setLoading(true);
+        const [scheduleData, simData] = await Promise.all([
+          fetchSchedule(),
+          fetchDashboardMatches(),
+        ]);
+        setScheduleGames(scheduleData.games);
+        setSimulations(simData);
         setError(null);
-
-        const data = await fetchSchedule();
-
-        setScheduleGames(data.games);
-
       } catch (err: any) {
-        console.error("Error caught:", err);
+        console.error("Error loading data:", err);
         console.error("Error message:", err.message);
         console.error("Error stack:", err.stack);
-        setError(err.message || 'Failed to load schedule data');
+        setError(err.message || 'Failed to load data');
       } finally {
         setLoading(false);
       }
     };
 
-    loadSchedule();
+    loadData();
   }, []);
 
-  const transformedGames: Game[] = scheduleGames.map((game, index) => ({
-    id: index,
-    team1: game.homeTeamName,
-    team2: game.awayTeamName,
-    prob1: 50, // Placeholder
-    prob2: 50, // Placeholder
-    date: game.gameDate,
-    time: game.gameTime,
-    isLive: game.isLive,
-    isFinal: game.isFinal,
-    innings: [],
-    winner: null,
-    status: game.isLive ? "Live" : game.isFinal ? "Final" : "Scheduled",
-    hits: [0,0],
-    homeruns: [0,0],
-    strikeouts: [0,0]
-  }));
+  // Merge schedule and simulations
+  const games: Game[] = scheduleGames.map((scheduleGame, idx) => {
+    const simMatch = findSimulationMatch(scheduleGame, simulations);
+    return mergeToGame(scheduleGame, simMatch, idx);
+  });
 
-  const sorted = [...transformedGames].sort((a, b) => b.prob1 - a.prob1);
+  const sorted = [...games].sort((a, b) => b.prob1 - a.prob1);
 
   const totalLiveGames = scheduleGames.filter(g => g.isLive).length;
   const summaryItems = [
