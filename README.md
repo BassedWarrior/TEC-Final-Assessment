@@ -1,9 +1,10 @@
 # MLB Baseball Game simulator
 
-Miguel Enrique Soria A01028033
-Jose Antonio Gonzalez Martinez A01028517
-Fausto de la Cuesta Jimenez Vallejo  A01027988
-Valentina Gonzalez Hernandez A01784875
+**ITC Dream Team** \
+[Miguel Enrique Soria](https://github.com/MESC220) A01028033 \
+[Jose Antonio Gonzalez Martinez](https://github.com/JoseGlezMtz) A01028517 \
+[Fausto de la Cuesta Jimenez Vallejo](https://github.com/BassedWarrior)  A01027988 \
+[Valentina Gonzalez Hernandez](https://github.com/paydelimon22) A01784875 \
 
 An end-to-end MLB game prediction platform that pairs a LightGBM-based Monte Carlo simulator with a full-stack web application. Users can browse the weekly MLB schedule, explore 2024 player statistics, build custom lineups, and run their own game simulations to generate win probabilities and per-inning stats.
 
@@ -20,7 +21,7 @@ An end-to-end MLB game prediction platform that pairs a LightGBM-based Monte Car
 
 ## How It Works
 
-1. The **Frontend** lets users pick real MLB players from the 2024 stats database and submit lineup cards to run a simulation.
+1. The **Frontend** lets users pick real MLB players from the 2026 (or earlier depending on the seeding script) stats database and submit lineup cards to run a simulation.
 2. The **Backend API** resolves player IDs to stat arrays, proxies the simulation request to the Model API, aggregates the results, and stores them in PostgreSQL.
 3. The **Model API** runs N Monte Carlo simulations using a LightGBM model trained on 2024–2025 Statcast pitch data. Each simulation plays a complete 9-inning game plate-appearance by plate-appearance.
 4. Results (win probability, per-inning averages, hit/HR/strikeout averages) are returned to the frontend for display.
@@ -77,6 +78,8 @@ SQL
 
 Ensure `pg_hba.conf` uses `scram-sha-256` (not `peer`/`ident`). See `backend/README.md` for details.
 
+For the data to be added in the database, several seeding scripts need to be ran in `backend/app/db/scripts`.
+
 ### 2 — Backend API
 
 ```bash
@@ -89,6 +92,8 @@ python -m app.db.scripts.seed_players
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
+or with `fastapi run` (or `fastapi dev` for developing, docs, and automatic restart on change)
+
 ### 3 — Model API
 
 ```bash
@@ -97,13 +102,25 @@ pip install -r requirements.txt   # or reuse the venv with lightgbm added
 uvicorn main:app --reload --port 8001
 ```
 
+or with `fastapi run` (or `fastapi dev` for developing, docs, and automatic restart on change)
+
 ### 4 — Frontend
+
+With `npm`: 
 
 ```bash
 cd frontend
 npm install
 cp .env.example .env              # set VITE_API_URL=http://localhost:8000
 npm run dev
+```
+
+With `pnpm` (recommended)
+```bash
+cd frontend
+pnpm install
+cp .env.example .env      # configure your variables as needed and set VITE_API_URL-http://localhost
+pnpm dev
 ```
 
 Open **http://localhost:5173** in your browser.
@@ -133,6 +150,8 @@ This section covers deploying all three services on a single Linux VM or on sepa
 #### 1. PostgreSQL (production)
 
 Follow the same role/database creation steps from Quick Start. Set a strong password and record it for `DATABASE_URL`.
+
+Then, follow [these instructions](https://oneuptime.com/blog/post/2026-01-21-postgresql-pg-hba-authentication/view) to make sure your postgres database is properly listening to incoming traffic.
 
 #### 2. Backend — systemd service
 
