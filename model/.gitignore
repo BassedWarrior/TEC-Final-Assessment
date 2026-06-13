@@ -1,0 +1,8 @@
+# Ignore script generated files
+# DataFrame manipulation files
+*.parquet
+# Feature description
+
+# Lineup caches
+data/boxscore_cache/
+data/mlb_stats_cache/

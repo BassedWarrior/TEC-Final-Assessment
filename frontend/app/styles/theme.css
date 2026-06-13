@@ -1,0 +1,37 @@
+/* src/styles/theme.css */
+:root {
+  /* Primary colors */
+  --mlb-red: #c01e2e;
+  --mlb-red-dark: #89082d;
+  --mlb-red-light: #f07080;
+  --mlb-blue: #3b82f6;
+  --mlb-blue-dark: #1e40af;
+  --mlb-green: #4ade80;
+  --mlb-yellow: #fbbf24;
+
+  --home-blue: rgba(59,130,246,1);
+  --away-red: rgba(232,64,87,1);
+
+  /* Neutrals */
+  --bg-dark: #0d1117;
+  --bg-table: rgba(13, 17, 23, 0.63);
+  --bg-card: rgba(13, 17, 23, 0.85);
+  --border-light: rgba(255, 255, 255, 0.1);
+  --text-primary: #f0ede6;
+  --text-secondary: rgba(255, 255, 255, 0.7);
+
+  /* Typography */
+  --font-display: 'Playfair Display', serif;
+  --font-body: 'DM Sans', sans-serif;
+
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+}
+
+/* Utility classes (optional) */
+.bg-mlb-red { background: var(--mlb-red); }
+.text-mlb-red { color: var(--mlb-red); }

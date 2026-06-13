@@ -1,0 +1,5 @@
+sqlalchemy
+asyncpg
+python-dotenv
+pandas
+requests

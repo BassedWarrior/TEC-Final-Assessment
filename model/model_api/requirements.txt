@@ -1,0 +1,6 @@
+fastapi[standard]
+  uvicorn[standard]
+  lightgbm
+  numpy
+  pandas
+  python-dotenv
