@@ -31,7 +31,9 @@ backend/
 │   │   └── scripts/
 │   │       ├── init_db.py        # One-time table creation
 │   │       ├── drop_db.py        # Drop and recreate all tables
-│   │       └── seed_players.py   # Load 2024 MLB player stats from CSV
+│   │       └── seed_players.py   # Load 2026 MLB player stats from CSV
+│   │       └── seed_lineups.py   # Load team lineups
+│   │       └── download_matches.py   # gets nearing matches for the database
 │   ├── models/
 │   │   ├── user.py               # User (UUID PK, email, argon2 hash, token_version)
 │   │   ├── player.py             # Player (MLB stats seeded from 2024 data)
